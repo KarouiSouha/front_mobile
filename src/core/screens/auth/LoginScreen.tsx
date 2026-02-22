@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert, Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import { Colors, Spacing, BorderRadius, Typography, Shadow } from '../../constants/theme';
+
+const WEEG_BLUE = '#1a6fe8';
+const WEEG_ORANGE = '#e87c1a';
 
 export function LoginScreen({ navigation }: any) {
   const { login } = useAuth();
@@ -27,7 +30,6 @@ export function LoginScreen({ navigation }: any) {
       if (!result.success) {
         Alert.alert('Login Failed', result.message);
       }
-      // Navigation handled by AppNavigator watching user state
     } catch (e) {
       Alert.alert('Error', 'An error occurred during login');
     } finally {
@@ -52,11 +54,12 @@ export function LoginScreen({ navigation }: any) {
 
           {/* Logo */}
           <View style={styles.logoArea}>
-            <LinearGradient colors={[Colors.indigo600, Colors.violet600]} style={styles.logoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-              <Text style={styles.logoLetter}>F</Text>
-            </LinearGradient>
-            <Text style={styles.logoTitle}>FASI</Text>
-            <Text style={styles.logoSub}>Financial Analytics & System Intelligence</Text>
+            <Image
+              source={require('../../assets/logo.jpeg')}
+              style={styles.logoImg}
+              resizeMode="contain"
+            />
+            <Text style={styles.logoSub}>Where Data Finds Balance</Text>
           </View>
 
           {/* Form Card */}
@@ -105,7 +108,7 @@ export function LoginScreen({ navigation }: any) {
             {/* Submit Button */}
             <TouchableOpacity onPress={handleLogin} disabled={loading} style={{ marginTop: 8 }}>
               <LinearGradient
-                colors={loading ? [Colors.gray300, Colors.gray400] : [Colors.indigo600, Colors.violet600]}
+                colors={loading ? [Colors.gray300, Colors.gray400] : [WEEG_BLUE, WEEG_ORANGE]}
                 style={styles.submitBtn}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -154,13 +157,11 @@ export function LoginScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.indigo50 },
+  container: { flex: 1, backgroundColor: '#eff6ff' },
   scroll: { flexGrow: 1, paddingHorizontal: Spacing.base, paddingVertical: 32, justifyContent: 'center' },
 
   logoArea: { alignItems: 'center', marginBottom: 32 },
-  logoBox: { width: 64, height: 64, borderRadius: BorderRadius['2xl'], alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  logoLetter: { fontSize: 28, fontWeight: '900', color: Colors.white },
-  logoTitle: { fontSize: 28, fontWeight: '800', color: Colors.indigo600, marginBottom: 4 },
+  logoImg: { width: 220, height: 80, marginBottom: 8 },
   logoSub: { fontSize: 13, color: Colors.gray500, textAlign: 'center' },
 
   card: { backgroundColor: Colors.white, borderRadius: BorderRadius['2xl'], padding: 24, borderWidth: 1, borderColor: Colors.gray100 },
@@ -181,12 +182,12 @@ const styles = StyleSheet.create({
   demoBox: { marginTop: 20, backgroundColor: Colors.gray50, borderRadius: BorderRadius.lg, padding: 14 },
   demoTitle: { fontSize: 12, fontWeight: '700', color: Colors.foreground, marginBottom: 10 },
   demoButtons: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  demoChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: Colors.indigo200, backgroundColor: Colors.indigo50 },
-  demoChipText: { fontSize: 12, fontWeight: '600', color: Colors.indigo600 },
+  demoChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: '#bfdbfe', backgroundColor: '#eff6ff' },
+  demoChipText: { fontSize: 12, fontWeight: '600', color: WEEG_BLUE },
   demoCred: { fontSize: 11, color: Colors.gray500, lineHeight: 18 },
   demoCredsList: { gap: 2 },
 
   signupRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20 },
   signupText: { fontSize: 14, color: Colors.gray500 },
-  signupLink: { fontSize: 14, fontWeight: '600', color: Colors.indigo600 },
+  signupLink: { fontSize: 14, fontWeight: '600', color: WEEG_BLUE },
 });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, Image } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,11 +10,15 @@ import { ControlScreen } from '../screens/control/ControlScreen';
 import { AdminScreen } from '../screens/admin/AdminScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
 
-import { Colors, BorderRadius, Spacing } from '../constants/theme';
+import { Colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { alerts } from '../lib/mockData';
 
 const Tab = createBottomTabNavigator();
+
+// Weeg brand colors
+const WEEG_BLUE = '#1a6fe8';
+const WEEG_ORANGE = '#e87c1a';
 
 function SearchModal({ visible, onClose }: any) {
   const [q, setQ] = useState('');
@@ -32,7 +36,7 @@ function SearchModal({ visible, onClose }: any) {
             style={{ flex: 1, fontSize: 15, color: Colors.foreground }}
           />
           <TouchableOpacity onPress={() => { setQ(''); onClose(); }}>
-            <Text style={{ fontSize: 14, color: Colors.indigo600, fontWeight: '600' }}>Cancel</Text>
+            <Text style={{ fontSize: 14, color: WEEG_BLUE, fontWeight: '600' }}>Cancel</Text>
           </TouchableOpacity>
         </View>
         <View style={{ padding: 16 }}>
@@ -62,12 +66,13 @@ function Header({ title, navigation }: { title: string; navigation?: any }) {
   return (
     <View style={h.header}>
       <SearchModal visible={searchOpen} onClose={() => setSearchOpen(false)} />
-      {/* Left: Logo + Title */}
+      {/* Left: Logo */}
       <View style={h.left}>
-        <LinearGradient colors={[Colors.indigo600, Colors.violet600]} style={h.logo} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <Text style={h.logoF}>F</Text>
-        </LinearGradient>
-        <Text style={h.appName}>FASI</Text>
+        <Image
+          source={require('../assets/logo.jpeg')}
+          style={h.logoImg}
+          resizeMode="contain"
+        />
       </View>
       {/* Right: Search + Notifs + User */}
       <View style={h.right}>
@@ -83,7 +88,7 @@ function Header({ title, navigation }: { title: string; navigation?: any }) {
           )}
         </TouchableOpacity>
         <View style={h.userRow}>
-          <LinearGradient colors={[Colors.indigo600, Colors.violet600]} style={h.avatar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <LinearGradient colors={[WEEG_BLUE, WEEG_ORANGE]} style={h.avatar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <Text style={h.avatarTxt}>{(user?.name || 'J').charAt(0).toUpperCase()}</Text>
           </LinearGradient>
           <View>
@@ -98,10 +103,8 @@ function Header({ title, navigation }: { title: string; navigation?: any }) {
 
 const h = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.gray100 },
-  left: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logo: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  logoF: { fontSize: 13, fontWeight: '900', color: '#fff' },
-  appName: { fontSize: 18, fontWeight: '800', color: Colors.indigo600 },
+  left: { flexDirection: 'row', alignItems: 'center' },
+  logoImg: { width: 100, height: 36 },
   right: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   iconBtn: { padding: 6, position: 'relative' },
   badge: { position: 'absolute', top: 2, right: 2, minWidth: 14, height: 14, borderRadius: 7, backgroundColor: '#dc2626', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
@@ -155,7 +158,7 @@ export function MainNavigator() {
           shadowOpacity: 0.06,
           shadowRadius: 8,
         },
-        tabBarActiveTintColor: Colors.indigo600,
+        tabBarActiveTintColor: WEEG_BLUE,
         tabBarInactiveTintColor: Colors.gray400,
         tabBarLabelStyle: { fontSize: 10, fontWeight: '600', marginTop: 2 },
       }}

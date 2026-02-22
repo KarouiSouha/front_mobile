@@ -5,6 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 
+const WEEG_BLUE = '#1a6fe8';
+const WEEG_ORANGE = '#e87c1a';
+
 export function SettingsScreen({ navigation }: any) {
   const { user, logout } = useAuth();
   const [notifications, setNotifications] = useState(true);
@@ -23,7 +26,7 @@ export function SettingsScreen({ navigation }: any) {
     {
       title: 'Notifications',
       icon: 'notifications-outline',
-      color: Colors.indigo600,
+      color: WEEG_BLUE,
       settings: [
         { label: 'Push Notifications', desc: 'Receive alerts on your device', value: notifications, setter: setNotifications },
         { label: 'Email Alerts', desc: 'Get critical alerts via email', value: emailAlerts, setter: setEmailAlerts },
@@ -53,12 +56,12 @@ export function SettingsScreen({ navigation }: any) {
 
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>Settings</Text>
-          <Text style={styles.pageSubtitle}>Customize your FASI experience</Text>
+          <Text style={styles.pageSubtitle}>Customize your Weeg experience</Text>
         </View>
 
         {/* Profile Summary Card */}
         <View style={[styles.profileCard, Shadow.md]}>
-          <LinearGradient colors={[Colors.indigo600, Colors.violet600]} style={styles.profileAvatar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <LinearGradient colors={[WEEG_BLUE, WEEG_ORANGE]} style={styles.profileAvatar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <Text style={styles.profileAvatarText}>{user?.name?.charAt(0).toUpperCase()}</Text>
           </LinearGradient>
           <View style={{ flex: 1 }}>
@@ -91,7 +94,7 @@ export function SettingsScreen({ navigation }: any) {
                 <Switch
                   value={setting.value}
                   onValueChange={setting.setter}
-                  trackColor={{ false: Colors.gray200, true: Colors.indigo600 }}
+                  trackColor={{ false: Colors.gray200, true: WEEG_BLUE }}
                   thumbColor={Colors.white}
                 />
               </View>
@@ -105,7 +108,7 @@ export function SettingsScreen({ navigation }: any) {
             { icon: 'shield-checkmark-outline', label: 'Privacy & Security', color: Colors.warning },
             { icon: 'help-circle-outline', label: 'Help & Support', color: Colors.info },
             { icon: 'document-text-outline', label: 'Terms & Privacy', color: Colors.gray500 },
-            { icon: 'information-circle-outline', label: 'About FASI', color: Colors.gray500 },
+            { icon: 'information-circle-outline', label: 'About Weeg', color: Colors.gray500 },
           ].map((item, i) => (
             <TouchableOpacity key={i} style={[styles.navRow, i > 0 && styles.navRowBorder]}>
               <View style={[styles.navIcon, { backgroundColor: item.color + '20' }]}>
@@ -123,7 +126,7 @@ export function SettingsScreen({ navigation }: any) {
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
-        <Text style={styles.versionText}>FASI v1.0.0 · Financial Analytics & System Intelligence</Text>
+        <Text style={styles.versionText}>Weeg v1.0.0 · Where Data Finds Balance</Text>
 
       </View>
     </ScrollView>
@@ -142,8 +145,8 @@ const styles = StyleSheet.create({
   profileAvatarText: { fontSize: 22, fontWeight: '800', color: Colors.white },
   profileName: { fontSize: 16, fontWeight: '700', color: Colors.foreground },
   profileEmail: { fontSize: 12, color: Colors.gray500, marginTop: 2 },
-  roleBadge: { marginTop: 4, alignSelf: 'flex-start', backgroundColor: Colors.indigo50, paddingHorizontal: 10, paddingVertical: 3, borderRadius: BorderRadius.full },
-  roleBadgeText: { fontSize: 10, fontWeight: '800', color: Colors.indigo600 },
+  roleBadge: { marginTop: 4, alignSelf: 'flex-start', backgroundColor: '#eff6ff', paddingHorizontal: 10, paddingVertical: 3, borderRadius: BorderRadius.full },
+  roleBadgeText: { fontSize: 10, fontWeight: '800', color: WEEG_BLUE },
 
   settingsCard: { backgroundColor: Colors.white, borderRadius: BorderRadius.xl, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: Colors.gray100 },
   settingsHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },

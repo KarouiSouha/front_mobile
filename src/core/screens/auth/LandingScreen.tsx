@@ -9,6 +9,9 @@ import { Colors, Spacing, BorderRadius, Typography, Shadow } from '../../constan
 
 const { width } = Dimensions.get('window');
 
+const WEEG_BLUE = '#1a6fe8';
+const WEEG_ORANGE = '#e87c1a';
+
 const problemSolutions = [
   { problem: 'Time-consuming manual Excel reports', solution: 'Automatic import and instant reports', icon: 'cloud-upload-outline' },
   { problem: 'Difficulty tracking performance', solution: 'Real-time KPI calculations', icon: 'trending-up-outline' },
@@ -17,10 +20,10 @@ const problemSolutions = [
 ];
 
 const analyticsFeatures = [
-  { icon: 'arrow-up-circle-outline', title: 'Automated Excel Import', description: 'Import your data with one click', color: Colors.indigo600 },
-  { icon: 'trending-up-outline', title: 'Real-time KPI Calculation', description: 'Track your indicators instantly', color: Colors.indigo600 },
-  { icon: 'document-text-outline', title: 'Detailed Report Generation', description: 'Complete and customizable reports', color: Colors.indigo600 },
-  { icon: 'arrow-down-circle-outline', title: 'PDF/Excel Export', description: 'Export your data easily', color: Colors.indigo600 },
+  { icon: 'arrow-up-circle-outline', title: 'Automated Excel Import', description: 'Import your data with one click', color: WEEG_BLUE },
+  { icon: 'trending-up-outline', title: 'Real-time KPI Calculation', description: 'Track your indicators instantly', color: WEEG_BLUE },
+  { icon: 'document-text-outline', title: 'Detailed Report Generation', description: 'Complete and customizable reports', color: WEEG_BLUE },
+  { icon: 'arrow-down-circle-outline', title: 'PDF/Excel Export', description: 'Export your data easily', color: WEEG_BLUE },
 ];
 
 const aiFeatures = [
@@ -42,7 +45,7 @@ const steps = [
   { number: '01', title: 'Import Your Data', description: 'Upload your Excel files in just a few clicks', icon: 'cloud-upload-outline', colors: [Colors.blue600, Colors.cyan500] as [string, string] },
   { number: '02', title: 'Analyze Automatically', description: 'AI calculates your KPIs and identifies trends', icon: 'sparkles-outline', colors: [Colors.purple600, Colors.pink500] as [string, string] },
   { number: '03', title: 'Receive Alerts', description: 'Intelligent notifications and real-time predictions', icon: 'notifications-outline', colors: [Colors.orange500, Colors.red500] as [string, string] },
-  { number: '04', title: 'Act Effectively', description: 'Make decisions based on concrete recommendations', icon: 'checkmark-circle-outline', colors: [Colors.indigo600, Colors.purple600] as [string, string] },
+  { number: '04', title: 'Act Effectively', description: 'Make decisions based on concrete recommendations', icon: 'checkmark-circle-outline', colors: [WEEG_BLUE, Colors.purple600] as [string, string] },
 ];
 
 const faqs = [
@@ -79,7 +82,6 @@ export function LandingScreen({ navigation }: any) {
         { icon: 'document-text-outline', text: 'Detailed multi-period reports' },
         { icon: 'people-outline', text: 'Simplified team management' },
         { icon: 'bar-chart-outline', text: 'Performance comparison' },
-
       ],
     },
     admin: {
@@ -119,19 +121,31 @@ export function LandingScreen({ navigation }: any) {
 
       {/* Sticky Nav */}
       <View style={styles.nav}>
-        <View style={styles.navLogo}>
-          <LinearGradient colors={[Colors.indigo600, Colors.violet600]} style={styles.logoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <Ionicons name="sparkles" size={20} color="white" />
-          </LinearGradient>
-          <Text style={styles.logoText}>FASI</Text>
+        {/* Logo: flex:1 + shrinks, image fills 100% of available space */}
+        <View style={styles.navLogoWrapper}>
+          <Image
+            source={require('../../assets/logo.jpeg')}
+            style={styles.navLogoImg}
+            resizeMode="contain"
+          />
         </View>
+
+        {/* Buttons: never shrink, always their natural size */}
         <View style={styles.navButtons}>
-          <TouchableOpacity style={styles.navGhost} onPress={() => navigation.navigate('Login')}>
+          <TouchableOpacity
+            style={styles.navGhost}
+            onPress={() => navigation.navigate('Login')}
+          >
             <Text style={styles.navGhostText}>Sign In</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-            <LinearGradient colors={[Colors.indigo600, Colors.violet600]} style={styles.navCTA} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-              <Text style={styles.navCTAText}>Get Started</Text>
+            <LinearGradient
+              colors={[WEEG_BLUE, WEEG_ORANGE]}
+              style={styles.navCTA}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.navCTAText}>Start</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -140,19 +154,18 @@ export function LandingScreen({ navigation }: any) {
       <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* 1. HERO */}
-        <LinearGradient colors={['#eff6ff', '#ffffff', '#f5f3ff']} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <LinearGradient colors={['#eff6ff', '#ffffff', '#fff7ed']} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           {/* AI Badge */}
           <View style={styles.heroBadge}>
             <View style={styles.heroBadgeInner}>
-              <Ionicons name="sparkles-outline" size={14} color={Colors.indigo600} />
+              <Ionicons name="sparkles-outline" size={14} color={WEEG_BLUE} />
               <Text style={styles.heroBadgeText}>Powered by Artificial Intelligence</Text>
             </View>
           </View>
 
           <Text style={styles.heroTitle}>
-            {'Transform Your\n'}
-            <Text style={styles.heroTitleGrad}>Business Data{'\n'}</Text>
-            <Text style={styles.heroTitleBlack}>Into Actionable{'\n'}Insights</Text>
+            {'Where Data\n'}
+            <Text style={styles.heroTitleAccent}>Finds Balance</Text>
           </Text>
 
           <Text style={styles.heroSubtitle}>
@@ -166,12 +179,12 @@ export function LandingScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
 
-          {/* PC Image */}
-          <View style={styles.heroImageContainer}>
+          {/* Hero Logo */}
+          <View style={styles.heroLogoContainer}>
             <Image
-              source={require('../../assets/pc.png')}
-              style={styles.heroImage}
-              resizeMode="cover"
+              source={require('../../assets/logo.jpeg')}
+              style={styles.heroLogo}
+              resizeMode="contain"
             />
           </View>
         </LinearGradient>
@@ -179,11 +192,11 @@ export function LandingScreen({ navigation }: any) {
         {/* 2. PROBLEMS/SOLUTIONS */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Challenges, <Text style={styles.gradientText}>Our Solutions</Text></Text>
-          <Text style={styles.sectionSubtitle}>FASI solves the problems you face every day</Text>
+          <Text style={styles.sectionSubtitle}>Weeg solves the problems you face every day</Text>
 
           {problemSolutions.map((item, i) => (
             <View key={i} style={[styles.problemCard, Shadow.sm]}>
-              <LinearGradient colors={[Colors.indigo600, Colors.violet600]} style={styles.problemIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <LinearGradient colors={[WEEG_BLUE, WEEG_ORANGE]} style={styles.problemIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                 <Ionicons name={item.icon as any} size={22} color="white" />
               </LinearGradient>
               <View style={styles.problemContent}>
@@ -203,7 +216,7 @@ export function LandingScreen({ navigation }: any) {
         {/* 3. KEY FEATURES */}
         <View style={[styles.section, styles.sectionGray]}>
           <View style={styles.featureBadge}>
-            <Ionicons name="star-outline" size={14} color={Colors.indigo600} />
+            <Ionicons name="star-outline" size={14} color={WEEG_BLUE} />
             <Text style={styles.featureBadgeText}>Powerful Features</Text>
           </View>
           <Text style={styles.sectionTitle}>Everything You Need</Text>
@@ -211,7 +224,7 @@ export function LandingScreen({ navigation }: any) {
           <FeatureSection
             title="Analytics & Reporting"
             icon="bar-chart-outline"
-            iconBg={[Colors.blue500, Colors.indigo600]}
+            iconBg={[Colors.blue500, WEEG_BLUE]}
             features={analyticsFeatures}
           />
           <FeatureSection
@@ -237,7 +250,7 @@ export function LandingScreen({ navigation }: any) {
             {(['agent', 'manager', 'admin'] as const).map(role => (
               <TouchableOpacity key={role} onPress={() => setActiveRole(role)}>
                 {activeRole === role ? (
-                  <LinearGradient colors={[Colors.indigo600, Colors.violet600]} style={styles.roleTabActive} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                  <LinearGradient colors={[WEEG_BLUE, WEEG_ORANGE]} style={styles.roleTabActive} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
                     <Text style={styles.roleTabActiveText}>{role.charAt(0).toUpperCase() + role.slice(1)}s</Text>
                   </LinearGradient>
                 ) : (
@@ -249,12 +262,12 @@ export function LandingScreen({ navigation }: any) {
             ))}
           </View>
 
-          <LinearGradient colors={[Colors.indigo50, Colors.violet50]} style={styles.roleContent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <LinearGradient colors={['#eff6ff', '#fff7ed']} style={styles.roleContent} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <Text style={styles.roleTitle}>{roleContent[activeRole].title}</Text>
             <Text style={styles.roleSubtitle}>{roleContent[activeRole].subtitle}</Text>
             {roleContent[activeRole].benefits.map((b, i) => (
               <View key={i} style={[styles.roleBenefit, Shadow.sm]}>
-                <Ionicons name={b.icon as any} size={24} color={Colors.indigo600} />
+                <Ionicons name={b.icon as any} size={24} color={WEEG_BLUE} />
                 <Text style={styles.roleBenefitText}>{b.text}</Text>
               </View>
             ))}
@@ -262,7 +275,7 @@ export function LandingScreen({ navigation }: any) {
         </View>
 
         {/* 5. HOW IT WORKS */}
-        <LinearGradient colors={[Colors.indigo600, Colors.violet600, Colors.indigo700]} style={styles.howSection} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <LinearGradient colors={[WEEG_BLUE, '#0f4fa8', '#1a1a2e']} style={styles.howSection} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <Text style={styles.howTitle}>How It Works</Text>
           <Text style={styles.howSubtitle}>4 simple steps to transform your business</Text>
 
@@ -279,21 +292,21 @@ export function LandingScreen({ navigation }: any) {
           ))}
         </LinearGradient>
 
-        {/* 6. SEE FASI IN ACTION */}
+        {/* 6. SEE WEEG IN ACTION */}
         <View style={[styles.section, styles.sectionGray]}>
           <View style={styles.demoCard}>
             <View style={styles.demoLeft}>
-              <Text style={styles.demoTitle}>See FASI in Action</Text>
-              <Text style={styles.demoDesc}>Watch how FASI transforms your data into actionable insights in just a few clicks</Text>
+              <Text style={styles.demoTitle}>See Weeg in Action</Text>
+              <Text style={styles.demoDesc}>Watch how Weeg transforms your data into actionable insights in just a few clicks</Text>
               <TouchableOpacity>
-                <LinearGradient colors={[Colors.indigo600, Colors.violet600]} style={styles.demoButton} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <LinearGradient colors={[WEEG_BLUE, WEEG_ORANGE]} style={styles.demoButton} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
                   <Ionicons name="play-circle-outline" size={18} color="white" />
                   <Text style={styles.demoButtonText}>Watch Demo Video</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
             <View style={styles.demoRight}>
-              <View style={styles.demoVideoThumb}>
+              <View style={[styles.demoVideoThumb, { backgroundColor: WEEG_BLUE }]}>
                 <Ionicons name="play-circle" size={48} color="white" />
               </View>
             </View>
@@ -320,13 +333,12 @@ export function LandingScreen({ navigation }: any) {
         <View style={styles.footer}>
           <View style={styles.footerTop}>
             <View style={styles.footerBrand}>
-              <View style={styles.footerLogo}>
-                <LinearGradient colors={[Colors.indigo600, Colors.violet600]} style={styles.footerLogoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                  <Ionicons name="sparkles" size={16} color="white" />
-                </LinearGradient>
-                <Text style={styles.footerLogoText}>FASI</Text>
-              </View>
-              <Text style={styles.footerDesc}>The intelligent platform that transforms your business data into actionable insights.</Text>
+              <Image
+                source={require('../../assets/logo.jpeg')}
+                style={styles.footerLogoImg}
+                resizeMode="contain"
+              />
+              <Text style={styles.footerDesc}>The intelligent platform that transforms your business data into actionable insights. Where Data Finds Balance.</Text>
             </View>
 
             <View style={styles.footerColumns}>
@@ -342,7 +354,7 @@ export function LandingScreen({ navigation }: any) {
                 <Text style={styles.footerColTitle}>Contact</Text>
                 <View style={styles.footerContactRow}>
                   <Ionicons name="mail-outline" size={13} color={Colors.gray400} />
-                  <Text style={styles.footerLink}>contact@fasi.io</Text>
+                  <Text style={styles.footerLink}>contact@weeg.io</Text>
                 </View>
                 <View style={styles.footerContactRow}>
                   <Ionicons name="call-outline" size={13} color={Colors.gray400} />
@@ -357,7 +369,7 @@ export function LandingScreen({ navigation }: any) {
           </View>
 
           <View style={styles.footerBottom}>
-            <Text style={styles.footerCopy}>© 2026 FASI. All rights reserved.</Text>
+            <Text style={styles.footerCopy}>© 2026 Weeg. All rights reserved.</Text>
             <View style={styles.footerBottomLinks}>
               {['Legal', 'Privacy', 'Terms'].map(l => (
                 <Text key={l} style={styles.footerBottomLink}>{l}</Text>
@@ -374,44 +386,63 @@ export function LandingScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
   nav: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.base, paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: 'rgba(255,255,255,0.97)',
-    borderBottomWidth: 1, borderBottomColor: Colors.gray100, zIndex: 100,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.gray100,
+    zIndex: 100,
+    minHeight: 58,
+    overflow: 'hidden',
   },
-  navLogo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logoBox: { width: 36, height: 36, borderRadius: BorderRadius.lg, alignItems: 'center', justifyContent: 'center' },
-  logoText: { fontSize: 22, fontWeight: '800', color: Colors.indigo600 },
-  navButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  navGhost: { paddingHorizontal: 14, paddingVertical: 8 },
-  navGhostText: { fontSize: 14, fontWeight: '600', color: Colors.foreground },
-  navCTA: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: BorderRadius.lg },
-  navCTAText: { fontSize: 14, fontWeight: '700', color: Colors.white },
+  // Logo wrapper takes all remaining space and never pushes buttons
+  navLogoWrapper: {
+    flex: 1,
+    minWidth: 0,          // allows the wrapper to shrink below its content size
+    marginRight: 10,
+    height: 36,
+  },
+  // Image fills 100% of the wrapper width — shrinks automatically
+  navLogoImg: {
+    width: '100%',
+    height: '100%',
+  },
+  // Buttons side: never shrinks, never wraps
+  navButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
+    flexGrow: 0,
+  },
+  navGhost: { paddingHorizontal: 10, paddingVertical: 7 },
+  navGhostText: { fontSize: 13, fontWeight: '600', color: Colors.foreground },
+  navCTA: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: BorderRadius.lg },
+  navCTAText: { fontSize: 13, fontWeight: '700', color: Colors.white },
 
   // Hero
   hero: { paddingHorizontal: Spacing.base, paddingTop: 32, paddingBottom: 40 },
   heroBadge: { alignSelf: 'flex-start', marginBottom: 20 },
-  heroBadgeText: { fontSize: 12, fontWeight: '600', color: Colors.indigo600 }, 
-  heroBadgeInner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: Colors.indigo100, backgroundColor: Colors.indigo50 },
-  heroTitle: { fontSize: 34, fontWeight: '900', lineHeight: 42, marginBottom: 16 },
-  heroTitleGrad: { color: Colors.indigo600 ,textDecorationLine: 'underline', textDecorationColor: Colors.violet600 },
-  heroTitleBlack: { color: Colors.foreground },
+  heroBadgeText: { fontSize: 12, fontWeight: '600', color: WEEG_BLUE },
+  heroBadgeInner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: '#bfdbfe', backgroundColor: '#eff6ff' },
+  heroTitle: { fontSize: 34, fontWeight: '900', lineHeight: 42, marginBottom: 16, color: Colors.foreground },
+  heroTitleAccent: { color: WEEG_BLUE },
   heroSubtitle: { fontSize: 15, color: Colors.gray500, lineHeight: 24, marginBottom: 28 },
   bold: { fontWeight: '700', color: Colors.foreground },
   heroCTAs: { flexDirection: 'row', gap: 12, marginBottom: 28, flexWrap: 'wrap' },
-  ctaPrimary: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24, paddingVertical: 14, borderRadius: BorderRadius.xl },
-  ctaPrimaryText: { fontSize: 16, fontWeight: '700', color: Colors.white },
   ctaSecondary: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 14, borderRadius: BorderRadius.xl, borderWidth: 2, borderColor: Colors.gray200, backgroundColor: Colors.white },
   ctaSecondaryText: { fontSize: 15, fontWeight: '600', color: Colors.foreground },
-  heroImageContainer: { borderRadius: BorderRadius['2xl'], overflow: 'hidden', borderWidth: 1, borderColor: Colors.indigo100 },
-  heroImage: { width: '100%', height: 200 },
+  heroLogoContainer: { borderRadius: BorderRadius['2xl'], overflow: 'hidden', borderWidth: 1, borderColor: '#bfdbfe', backgroundColor: Colors.white, padding: 16, alignItems: 'center' },
+  heroLogo: { width: '80%', height: 120 },
 
   // Sections
   section: { paddingHorizontal: Spacing.base, paddingVertical: 40 },
   sectionGray: { backgroundColor: Colors.gray50 },
   sectionTitle: { fontSize: 26, fontWeight: '800', color: Colors.foreground, marginBottom: 8, textAlign: 'center' },
   sectionSubtitle: { fontSize: 15, color: Colors.gray500, textAlign: 'center', marginBottom: 24 },
-  gradientText: { color: Colors.indigo600 },
+  gradientText: { color: WEEG_BLUE },
 
   // Problem cards
   problemCard: { flexDirection: 'row', gap: 14, backgroundColor: Colors.white, borderRadius: BorderRadius.xl, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: Colors.gray100 },
@@ -422,8 +453,8 @@ const styles = StyleSheet.create({
   solutionText: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.foreground },
 
   // Features
-  featureBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', backgroundColor: Colors.indigo50, paddingHorizontal: 14, paddingVertical: 6, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: Colors.indigo100, marginBottom: 12 },
-  featureBadgeText: { fontSize: 12, fontWeight: '600', color: Colors.indigo600 },
+  featureBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', backgroundColor: '#eff6ff', paddingHorizontal: 14, paddingVertical: 6, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: '#bfdbfe', marginBottom: 12 },
+  featureBadgeText: { fontSize: 12, fontWeight: '600', color: WEEG_BLUE },
   featureSection: { marginBottom: 28 },
   featureSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
   featureSectionIcon: { width: 40, height: 40, borderRadius: BorderRadius.lg, alignItems: 'center', justifyContent: 'center' },
@@ -440,7 +471,7 @@ const styles = StyleSheet.create({
   roleTabActiveText: { fontSize: 14, fontWeight: '700', color: Colors.white },
   roleTabInactive: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: BorderRadius.lg, backgroundColor: Colors.gray100 },
   roleTabInactiveText: { fontSize: 14, fontWeight: '600', color: Colors.gray600 },
-  roleContent: { borderRadius: BorderRadius['2xl'], padding: 20, borderWidth: 2, borderColor: Colors.indigo100 },
+  roleContent: { borderRadius: BorderRadius['2xl'], padding: 20, borderWidth: 2, borderColor: '#bfdbfe' },
   roleTitle: { fontSize: 22, fontWeight: '800', color: Colors.foreground, marginBottom: 4 },
   roleSubtitle: { fontSize: 14, color: Colors.gray500, marginBottom: 16 },
   roleBenefit: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: Colors.white, borderRadius: BorderRadius.xl, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: Colors.gray100 },
@@ -453,7 +484,6 @@ const styles = StyleSheet.create({
   stepItem: { flexDirection: 'row', gap: 16, marginBottom: 24, alignItems: 'flex-start' },
   stepIcon: { width: 56, height: 56, borderRadius: BorderRadius.xl, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   stepContent: { flex: 1 },
-  stepNumber: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.5)', letterSpacing: 2, marginBottom: 2 },
   stepTitle: { fontSize: 18, fontWeight: '700', color: Colors.white, marginBottom: 4 },
   stepDesc: { fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 20 },
 
@@ -465,7 +495,7 @@ const styles = StyleSheet.create({
   demoButton: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 12, borderRadius: BorderRadius.xl, alignSelf: 'flex-start' },
   demoButtonText: { fontSize: 14, fontWeight: '700', color: Colors.white },
   demoRight: { width: 110, justifyContent: 'center', alignItems: 'center' },
-  demoVideoThumb: { width: 110, height: 80, borderRadius: BorderRadius.xl, backgroundColor: Colors.indigo600, alignItems: 'center', justifyContent: 'center' },
+  demoVideoThumb: { width: 110, height: 80, borderRadius: BorderRadius.xl, alignItems: 'center', justifyContent: 'center' },
 
   // FAQ
   faqItem: { backgroundColor: Colors.white, borderRadius: BorderRadius.xl, borderWidth: 1, borderColor: Colors.gray100, marginBottom: 10, overflow: 'hidden' },
@@ -473,21 +503,11 @@ const styles = StyleSheet.create({
   faqQuestion: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.foreground, marginRight: 10 },
   faqAnswer: { padding: 18, paddingTop: 0, fontSize: 14, color: Colors.gray500, lineHeight: 22 },
 
-  // Final CTA
-  finalCTA: { padding: Spacing.base, paddingVertical: 48, alignItems: 'center' },
-  finalCTATitle: { fontSize: 26, fontWeight: '800', color: Colors.white, textAlign: 'center', marginBottom: 10 },
-  finalCTASubtitle: { fontSize: 15, color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginBottom: 28 },
-  finalCTAButton: { backgroundColor: Colors.white, paddingHorizontal: 28, paddingVertical: 16, borderRadius: BorderRadius.xl, marginBottom: 16 },
-  finalCTAButtonText: { fontSize: 16, fontWeight: '700', color: Colors.indigo600 },
-  finalCTALink: { fontSize: 14, color: 'rgba(255,255,255,0.85)', textDecorationLine: 'underline' },
-
   // Footer
   footer: { backgroundColor: '#0a0a0f', padding: Spacing.base, paddingVertical: 40 },
   footerTop: { marginBottom: 24 },
   footerBrand: { marginBottom: 28 },
-  footerLogo: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  footerLogoBox: { width: 36, height: 36, borderRadius: BorderRadius.lg, alignItems: 'center', justifyContent: 'center' },
-  footerLogoText: { fontSize: 22, fontWeight: '800', color: Colors.white },
+  footerLogoImg: { width: 140, height: 50, marginBottom: 12 },
   footerDesc: { fontSize: 13, color: Colors.gray500, lineHeight: 20 },
   footerColumns: { flexDirection: 'row', flexWrap: 'wrap', gap: 24 },
   footerColumn: { minWidth: 100, gap: 8 },

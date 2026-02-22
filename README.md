@@ -1,4 +1,4 @@
-# FASI Mobile 📱
+# WEEG Mobile 📱
 
 Application mobile **React Native (Expo)** — identique au front web en termes de design, couleurs, textes et fonctionnalités.
 
@@ -15,7 +15,7 @@ Application mobile **React Native (Expo)** — identique au front web en termes 
 ## 📁 Structure
 
 ```
-fasi-mobile/
+weeg-mobile/
 ├── App.tsx                         # Entry point
 ├── src/app/
 │   ├── screens/

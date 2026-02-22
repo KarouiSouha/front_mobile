@@ -1,24 +1,24 @@
 {
   "expo": {
-    "name": "FASI",
-    "slug": "fasi-mobile",
+    "name": "Weeg",
+    "slug": "weeg-mobile",
     "version": "1.0.0",
-    "scheme": "fasi",
+    "scheme": "weeg",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#4f46e5"
+      "backgroundColor": "#1a6fe8"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.fasi.mobile"
+      "bundleIdentifier": "com.weeg.mobile"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#4f46e5"
+        "backgroundColor": "#1a6fe8"
       },
-      "package": "com.fasi.mobile"
+      "package": "com.weeg.mobile"
     },
     "web": {
       "bundler": "metro"

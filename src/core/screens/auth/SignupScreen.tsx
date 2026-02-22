@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert, Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import { Colors, Spacing, BorderRadius, Shadow } from '../../constants/theme';
+
+const WEEG_BLUE = '#1a6fe8';
+const WEEG_ORANGE = '#e87c1a';
 
 export function SignupScreen({ navigation }: any) {
   const { signup } = useAuth();
@@ -53,11 +56,12 @@ export function SignupScreen({ navigation }: any) {
 
           {/* Logo */}
           <View style={styles.logoArea}>
-            <LinearGradient colors={[Colors.indigo600, Colors.violet600]} style={styles.logoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-              <Text style={styles.logoLetter}>F</Text>
-            </LinearGradient>
-            <Text style={styles.logoTitle}>FASI</Text>
-            <Text style={styles.logoSub}>Financial Analytics & System Intelligence</Text>
+            <Image
+              source={require('../../assets/logo.jpeg')}
+              style={styles.logoImg}
+              resizeMode="contain"
+            />
+            <Text style={styles.logoSub}>Where Data Finds Balance</Text>
           </View>
 
           {/* Form Card */}
@@ -110,7 +114,7 @@ export function SignupScreen({ navigation }: any) {
 
             <TouchableOpacity onPress={handleSignup} disabled={loading} style={{ marginTop: 8 }}>
               <LinearGradient
-                colors={loading ? [Colors.gray300, Colors.gray400] : [Colors.indigo600, Colors.violet600]}
+                colors={loading ? [Colors.gray300, Colors.gray400] : [WEEG_BLUE, WEEG_ORANGE]}
                 style={styles.submitBtn}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -141,12 +145,10 @@ export function SignupScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.indigo50 },
+  container: { flex: 1, backgroundColor: '#eff6ff' },
   scroll: { flexGrow: 1, paddingHorizontal: Spacing.base, paddingVertical: 32 },
   logoArea: { alignItems: 'center', marginBottom: 32 },
-  logoBox: { width: 64, height: 64, borderRadius: BorderRadius['2xl'], alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  logoLetter: { fontSize: 28, fontWeight: '900', color: Colors.white },
-  logoTitle: { fontSize: 28, fontWeight: '800', color: Colors.indigo600, marginBottom: 4 },
+  logoImg: { width: 220, height: 80, marginBottom: 8 },
   logoSub: { fontSize: 13, color: Colors.gray500, textAlign: 'center' },
   card: { backgroundColor: Colors.white, borderRadius: BorderRadius['2xl'], padding: 24, borderWidth: 1, borderColor: Colors.gray100 },
   cardTitle: { fontSize: 22, fontWeight: '800', color: Colors.foreground, marginBottom: 4 },
@@ -157,13 +159,13 @@ const styles = StyleSheet.create({
   inputIcon: { paddingLeft: 14 },
   input: { flex: 1, paddingVertical: 13, paddingHorizontal: 10, fontSize: 15, color: Colors.foreground },
   eyeBtn: { padding: 14 },
-  roleBanner: { flexDirection: 'row', gap: 12, backgroundColor: Colors.indigo50, borderRadius: BorderRadius.lg, padding: 14, borderWidth: 1, borderColor: Colors.indigo100, marginBottom: 4 },
-  roleBannerIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.indigo600, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 },
+  roleBanner: { flexDirection: 'row', gap: 12, backgroundColor: '#eff6ff', borderRadius: BorderRadius.lg, padding: 14, borderWidth: 1, borderColor: '#bfdbfe', marginBottom: 4 },
+  roleBannerIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: WEEG_BLUE, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 },
   roleBannerTitle: { fontSize: 13, fontWeight: '700', color: Colors.foreground, marginBottom: 4 },
   roleBannerText: { fontSize: 11, color: Colors.gray500, lineHeight: 18 },
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 15, borderRadius: BorderRadius.lg },
   submitBtnText: { fontSize: 15, fontWeight: '700', color: Colors.white },
   signinRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20 },
   signinText: { fontSize: 14, color: Colors.gray500 },
-  signinLink: { fontSize: 14, fontWeight: '600', color: Colors.indigo600 },
+  signinLink: { fontSize: 14, fontWeight: '600', color: WEEG_BLUE },
 });
