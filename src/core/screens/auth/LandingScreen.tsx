@@ -56,11 +56,6 @@ const faqs = [
   { q: 'Can I change my plan at any time?', a: 'Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately and billing is prorated.' },
 ];
 
-const footerSections = [
-  { title: 'Product', links: ['Features', 'Pricing', 'Demo', 'API'] },
-  { title: 'Resources', links: ['Documentation', 'Guides', 'Blog', 'Support'] },
-];
-
 export function LandingScreen({ navigation }: any) {
   const [activeRole, setActiveRole] = useState<'agent' | 'manager' | 'admin'>('manager');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -329,55 +324,6 @@ export function LandingScreen({ navigation }: any) {
           ))}
         </View>
 
-        {/* FOOTER */}
-        <View style={styles.footer}>
-          <View style={styles.footerTop}>
-            <View style={styles.footerBrand}>
-              <Image
-                source={require('../../assets/logo.jpeg')}
-                style={styles.footerLogoImg}
-                resizeMode="contain"
-              />
-              <Text style={styles.footerDesc}>The intelligent platform that transforms your business data into actionable insights. Where Data Finds Balance.</Text>
-            </View>
-
-            <View style={styles.footerColumns}>
-              {footerSections.map((section, i) => (
-                <View key={i} style={styles.footerColumn}>
-                  <Text style={styles.footerColTitle}>{section.title}</Text>
-                  {section.links.map(link => (
-                    <Text key={link} style={styles.footerLink}>{link}</Text>
-                  ))}
-                </View>
-              ))}
-              <View style={styles.footerColumn}>
-                <Text style={styles.footerColTitle}>Contact</Text>
-                <View style={styles.footerContactRow}>
-                  <Ionicons name="mail-outline" size={13} color={Colors.gray400} />
-                  <Text style={styles.footerLink}>contact@weeg.io</Text>
-                </View>
-                <View style={styles.footerContactRow}>
-                  <Ionicons name="call-outline" size={13} color={Colors.gray400} />
-                  <Text style={styles.footerLink}>+1 (555) 123-4567</Text>
-                </View>
-                <View style={styles.footerContactRow}>
-                  <Ionicons name="location-outline" size={13} color={Colors.gray400} />
-                  <Text style={styles.footerLink}>San Francisco, CA</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.footerBottom}>
-            <Text style={styles.footerCopy}>© 2026 Weeg. All rights reserved.</Text>
-            <View style={styles.footerBottomLinks}>
-              {['Legal', 'Privacy', 'Terms'].map(l => (
-                <Text key={l} style={styles.footerBottomLink}>{l}</Text>
-              ))}
-            </View>
-          </View>
-        </View>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -503,19 +449,5 @@ const styles = StyleSheet.create({
   faqQuestion: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.foreground, marginRight: 10 },
   faqAnswer: { padding: 18, paddingTop: 0, fontSize: 14, color: Colors.gray500, lineHeight: 22 },
 
-  // Footer
-  footer: { backgroundColor: '#0a0a0f', padding: Spacing.base, paddingVertical: 40 },
-  footerTop: { marginBottom: 24 },
-  footerBrand: { marginBottom: 28 },
-  footerLogoImg: { width: 140, height: 50, marginBottom: 12 },
-  footerDesc: { fontSize: 13, color: Colors.gray500, lineHeight: 20 },
-  footerColumns: { flexDirection: 'row', flexWrap: 'wrap', gap: 24 },
-  footerColumn: { minWidth: 100, gap: 8 },
-  footerColTitle: { fontSize: 14, fontWeight: '700', color: Colors.white, marginBottom: 4 },
-  footerLink: { fontSize: 13, color: Colors.gray400 },
-  footerContactRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  footerBottom: { borderTopWidth: 1, borderTopColor: '#1f1f2e', paddingTop: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 },
-  footerCopy: { fontSize: 12, color: Colors.gray600 },
-  footerBottomLinks: { flexDirection: 'row', gap: 16 },
   footerBottomLink: { fontSize: 12, color: Colors.gray500 },
 });
