@@ -45,6 +45,10 @@ interface AuthContextType {
     email: string;
     phone?: string;
     companyName: string;
+    industry: string;
+    country: string;
+    city: string;
+    currentErp?: string;
     password: string;
     passwordConfirm: string;
   }) => Promise<{ success: boolean; message: string }>;
@@ -110,17 +114,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const accessToken = await TokenStorage.getAccess();
 
         if (cachedUser && accessToken) {
-          setUser(mapBackendUser(cachedUser as BackendUser));
+          // ⚠️  Ne PAS afficher le cache avant confirmation backend.
           // Vérifier la validité du token en récupérant le profil réel
           const profileRes = await UserService.getProfile();
           if (profileRes.ok && profileRes.data) {
+            // ✅ Backend confirme → afficher l'utilisateur
             const freshUser = mapBackendUser(profileRes.data);
             setUser(freshUser);
             await TokenStorage.saveUser(profileRes.data);
           } else if (profileRes.status === 401) {
-            // Token invalide → tenter refresh
+            // 🔄 Token expiré → tenter refresh
             const refreshed = await AuthService.refreshTokens();
             if (!refreshed) {
+              // ❌ Refresh échoué → vider le cache, forcer reconnexion
               await TokenStorage.clearTokens();
               setUser(null);
             } else {
@@ -129,8 +135,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (retryRes.ok && retryRes.data) {
                 setUser(mapBackendUser(retryRes.data));
                 await TokenStorage.saveUser(retryRes.data);
+              } else {
+                // Retry échoué → vider le cache
+                await TokenStorage.clearTokens();
+                setUser(null);
               }
             }
+          } else {
+            // ❌ Erreur réseau (status 0) ou autre erreur → vider le cache
+            // Évite d'afficher un utilisateur fantôme dont le compte n'existe plus
+            await TokenStorage.clearTokens();
+            setUser(null);
           }
         }
       } catch (e) {
@@ -188,6 +203,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string;
     phone?: string;
     companyName: string;
+    industry: string;
+    country: string;
+    city: string;
+    currentErp?: string;
     password: string;
     passwordConfirm: string;
   }) => {
@@ -198,6 +217,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       last_name: userData.lastName.trim(),
       phone_number: userData.phone?.trim() || undefined,
       company_name: userData.companyName.trim(),
+      industry: userData.industry,
+      country: userData.country,
+      city: userData.city,
+      current_erp: userData.currentErp?.trim() || undefined,
       password: userData.password,
       password_confirm: userData.passwordConfirm,
     });

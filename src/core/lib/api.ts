@@ -177,6 +177,10 @@ export const AuthService = {
     last_name: string;
     phone_number?: string;
     company_name: string;
+    industry: string;
+    country: string;
+    city: string;
+    current_erp?: string;
     password: string;
     password_confirm: string;
   }): Promise<ApiResponse<{ message: string; status: string }>> {

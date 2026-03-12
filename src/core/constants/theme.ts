@@ -69,7 +69,6 @@ export const Colors = {
 
   violet50: '#f5f3ff',
   violet100: '#ede9fe',
-  violet600: '#7c3aed',
   violet950: '#2e1065',
 
   red50: '#fef2f2',

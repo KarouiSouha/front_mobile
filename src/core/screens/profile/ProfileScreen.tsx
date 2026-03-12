@@ -1,9 +1,6 @@
 /**
- * ProfileScreen.tsx — Profil connecté au backend Django WEEG
- * - Header dark navy + orange style Weeg (comme splash screen)
- * - Nom, email, rôle, company dans le header
- * - Section Permissions visible uniquement pour role === 'agent'
- * - Changement de mot de passe + sessions actives
+ * ProfileScreen.tsx — WEEG v2
+ * Design : luxury-utility · dark architectural header · refined cards
  */
 
 import React, { useState, useEffect } from 'react';
@@ -17,13 +14,92 @@ import { Colors, Spacing, BorderRadius, Shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserService, SessionService } from '../../lib/api';
 
-// ─── Couleurs Weeg (identiques au splash screen) ─────────────────────────────
-const WEEG_NAVY   = '#0d1b2e';   // fond sombre du splash
-const WEEG_BLUE   = '#1a6fe8';   // bleu logo
-const WEEG_BLUE2  = '#1a4a8a';   // bleu intermédiaire
-const WEEG_ORANGE = '#e87c1a';   // orange logo
+// ─── Design tokens ────────────────────────────────────────────────────────────
+const T = {
+  navy:        '#0a1628',
+  navyMid:     '#0f2040',
+  blue:        '#1a6fe8',
+  blueDim:     '#1a4a8a',
+  orange:      '#e87c1a',
+  orangeDim:   '#c4681500',
+  white:       '#ffffff',
+  surface:     '#f7f9fc',
+  card:        '#ffffff',
+  border:      '#e8edf5',
+  borderLight: '#f0f4f9',
+  text:        '#0d1b2e',
+  textSub:     '#64748b',
+  textMuted:   '#94a3b8',
+  green:       '#10b981',
+  greenBg:     '#d1fae5',
+  red:         '#ef4444',
+  redBg:       '#fee2e2',
+  amber:       '#f59e0b',
+  amberBg:     '#fef3c7',
+  blueBg:      '#eff6ff',
+};
 
 type Tab = 'account' | 'security' | 'permissions';
+
+// ─── Sous-composants ──────────────────────────────────────────────────────────
+
+function InfoRow({ icon, label, value, accent }: {
+  icon: string; label: string; value: string; accent?: string;
+}) {
+  return (
+    <View style={P.infoRow}>
+      <View style={P.infoIconWrap}>
+        <Ionicons name={icon as any} size={14} color={T.blue} />
+      </View>
+      <Text style={P.infoLabel}>{label}</Text>
+      <Text style={[P.infoValue, accent ? { color: accent, fontWeight: '700' } : {}]}
+        numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function SectionLabel({ text }: { text: string }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, marginTop: 4 }}>
+      <View style={{ flex: 1, height: 1, backgroundColor: T.border }} />
+      <Text style={{ fontSize: 10, fontWeight: '800', color: T.textMuted, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+        {text}
+      </Text>
+      <View style={{ flex: 1, height: 1, backgroundColor: T.border }} />
+    </View>
+  );
+}
+
+function FieldInput({ label, value, onChange, placeholder, icon, secure, showToggle, editable = true, keyboardType }: any) {
+  const [show, setShow] = useState(false);
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <Text style={P.fieldLabel}>{label}</Text>
+      <View style={[P.inputBox, !editable && { backgroundColor: T.surface, opacity: 0.7 }]}>
+        <Ionicons name={icon} size={15} color={T.textMuted} />
+        <TextInput
+          value={value}
+          onChangeText={onChange}
+          placeholder={placeholder}
+          placeholderTextColor={T.textMuted}
+          secureTextEntry={secure && !show}
+          editable={editable}
+          keyboardType={keyboardType || 'default'}
+          style={P.input}
+        />
+        {showToggle && (
+          <TouchableOpacity onPress={() => setShow(p => !p)}>
+            <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={17} color={T.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function ProfileScreen() {
   const { user, logout, changePassword, refreshProfile } = useAuth();
@@ -33,11 +109,11 @@ export function ProfileScreen() {
     : ['account', 'security'];
   const [tab, setTab] = useState<Tab>('account');
 
-  // ── Mode édition profil ──────────────────────────────────────────────────
-  const [editing, setEditing]       = useState(false);
-  const [firstName, setFirstName]   = useState(user?.name?.split(' ')[0] || '');
-  const [lastName, setLastName]     = useState(user?.name?.split(' ').slice(1).join(' ') || '');
-  const [phone, setPhone]           = useState(user?.phoneNumber || '');
+  // ── Edit profile ──────────────────────────────────────────────────────────
+  const [editing, setEditing]     = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName]   = useState('');
+  const [phone, setPhone]         = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
@@ -55,361 +131,391 @@ export function ProfileScreen() {
       phone_number: phone.trim() || undefined,
     });
     setSavingProfile(false);
-    if (res.ok) {
-      await refreshProfile();
-      setEditing(false);
-      Alert.alert('✓ Updated', 'Profile updated successfully.');
-    } else {
-      Alert.alert('Error', res.error || 'Failed to update profile.');
-    }
+    if (res.ok) { await refreshProfile(); setEditing(false); Alert.alert('✓ Updated', 'Profile saved.'); }
+    else Alert.alert('Error', res.error || 'Failed to update profile.');
   };
 
-  const handleCancelEdit = () => {
-    setFirstName(user?.name?.split(' ')[0] || '');
-    setLastName(user?.name?.split(' ').slice(1).join(' ') || '');
-    setPhone(user?.phoneNumber || '');
-    setEditing(false);
-  };
-
-  // ── Changement mot de passe ──────────────────────────────────────────────
+  // ── Change password ───────────────────────────────────────────────────────
   const [oldPw, setOldPw]         = useState('');
   const [newPw, setNewPw]         = useState('');
   const [confirmPw, setConfirmPw] = useState('');
-  const [showOld, setShowOld]     = useState(false);
-  const [showNew, setShowNew]     = useState(false);
   const [savingPw, setSavingPw]   = useState(false);
 
   const handleChangePassword = async () => {
     if (!oldPw || !newPw || !confirmPw) { Alert.alert('Error', 'Please fill all fields.'); return; }
-    if (newPw.length < 8)               { Alert.alert('Error', 'New password must be at least 8 characters.'); return; }
-    if (newPw !== confirmPw)            { Alert.alert('Error', 'New passwords do not match.'); return; }
+    if (newPw.length < 8) { Alert.alert('Error', 'Password must be at least 8 characters.'); return; }
+    if (newPw !== confirmPw) { Alert.alert('Error', 'Passwords do not match.'); return; }
     setSavingPw(true);
     const result = await changePassword(oldPw, newPw, confirmPw);
     setSavingPw(false);
-    if (result.success) {
-      Alert.alert('✓ Password Changed', result.message);
-      setOldPw(''); setNewPw(''); setConfirmPw('');
-    } else Alert.alert('Error', result.message);
+    if (result.success) { Alert.alert('✓ Password Changed', result.message); setOldPw(''); setNewPw(''); setConfirmPw(''); }
+    else Alert.alert('Error', result.message);
   };
 
-  // ── Sessions ─────────────────────────────────────────────────────────────
-  const [sessions, setSessions]             = useState<any[]>([]);
-  const [loadingSessions, setLoadingSessions] = useState(false);
+  // ── Sessions ──────────────────────────────────────────────────────────────
+  const [sessions, setSessions]         = useState<any[]>([]);
+  const [loadingSessions, setLoading]   = useState(false);
 
   useEffect(() => { if (tab === 'security') loadSessions(); }, [tab]);
 
   const loadSessions = async () => {
-    setLoadingSessions(true);
+    setLoading(true);
     const res = await SessionService.getActiveSessions();
     if (res.ok) setSessions(res.data?.sessions || []);
-    setLoadingSessions(false);
+    setLoading(false);
   };
 
-  const handleRevokeSession = (sessionId: string) => {
-    Alert.alert('Revoke Session', 'This device will be logged out immediately.', [
+  const handleRevokeSession = (id: string) => {
+    Alert.alert('Revoke Session', 'This device will be logged out.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Revoke', style: 'destructive', onPress: async () => {
-        const res = await SessionService.revokeSession(sessionId);
-        if (res.ok) setSessions(p => p.filter(s => s.id !== sessionId));
-        else Alert.alert('Error', res.error || 'Failed.');
+          const res = await SessionService.revokeSession(id);
+          if (res.ok) setSessions(p => p.filter(s => s.id !== id));
+          else Alert.alert('Error', res.error || 'Failed.');
       }},
     ]);
   };
 
   const handleLogoutAll = () => {
-    Alert.alert('Log Out All Devices', 'This will close all active sessions including this one.', [
+    Alert.alert('Log Out All Devices', 'All sessions will be closed.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Log Out All', style: 'destructive', onPress: async () => {
-        const res = await SessionService.logoutAll();
-        if (res.ok) await logout();
-        else Alert.alert('Error', res.error || 'Failed.');
+          const res = await SessionService.logoutAll();
+          if (res.ok) await logout();
+          else Alert.alert('Error', res.error || 'Failed.');
       }},
     ]);
   };
 
-  const roleColor: Record<string, string> = {
-    admin: '#dc2626', manager: WEEG_BLUE, agent: '#16a34a',
+  const roleColors: Record<string, string> = {
+    admin: T.red, manager: T.blue, agent: T.green,
+  };
+  const initials = (user?.name || 'U').split(' ').map((w: string) => w[0] || '').join('').slice(0, 2).toUpperCase();
+
+  // ── Tab config ────────────────────────────────────────────────────────────
+  const tabCfg: Record<Tab, { icon: string; label: string }> = {
+    account:     { icon: 'person-outline',    label: 'Account'     },
+    security:    { icon: 'shield-outline',    label: 'Security'    },
+    permissions: { icon: 'key-outline',       label: 'Permissions' },
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.gray50 }}>
+    <View style={{ flex: 1, backgroundColor: T.surface }}>
 
-      {/* ── Header style Weeg (dark navy → bleu → orange) ── */}
-      <LinearGradient
-        colors={[WEEG_NAVY, WEEG_BLUE2, WEEG_ORANGE]}
-        style={ps.profileHeader}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <View style={P.header}>
+        {/* Geometric decoration */}
+        <View style={P.headerCircle1} />
+        <View style={P.headerCircle2} />
+
         {/* Avatar */}
-        <View style={ps.avatarRing}>
-          <View style={ps.avatar}>
-            <Text style={ps.avatarTxt}>{(user?.name || 'U').charAt(0).toUpperCase()}</Text>
-          </View>
+        <View style={P.avatarRing}>
+          <LinearGradient colors={[T.blue, T.orange]} style={P.avatar}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <Text style={P.avatarTxt}>{initials}</Text>
+          </LinearGradient>
         </View>
 
-        {/* Nom */}
-        <Text style={ps.profileName}>{user?.name || '—'}</Text>
+        <Text style={P.headerName}>{user?.name || '—'}</Text>
 
-        {/* Email */}
-        <View style={ps.infoRow}>
-          <Ionicons name="mail-outline" size={13} color="rgba(255,255,255,0.7)" />
-          <Text style={ps.infoTxt}>{user?.email || '—'}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 14 }}>
+          <Ionicons name="mail-outline" size={12} color="rgba(255,255,255,0.55)" />
+          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{user?.email || '—'}</Text>
         </View>
 
-        {/* Badges : Rôle + Company */}
-        <View style={ps.badgeRow}>
-          <View style={[ps.badge, { backgroundColor: WEEG_ORANGE + 'cc' }]}>
-            <Ionicons name="briefcase-outline" size={11} color="#fff" />
-            <Text style={ps.badgeTxt}>{(user?.role || 'user').toUpperCase()}</Text>
+        {/* Badges */}
+        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <View style={[P.badge, { backgroundColor: T.orange + 'cc' }]}>
+            <Ionicons name="briefcase-outline" size={10} color="#fff" />
+            <Text style={P.badgeTxt}>{(user?.role || 'user').toUpperCase()}</Text>
           </View>
           {user?.companyName && (
-            <View style={[ps.badge, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
-              <Ionicons name="business-outline" size={11} color="#fff" />
-              <Text style={ps.badgeTxt}>{user.companyName}</Text>
+            <View style={[P.badge, { backgroundColor: 'rgba(255,255,255,0.14)' }]}>
+              <Ionicons name="business-outline" size={10} color="#fff" />
+              <Text style={P.badgeTxt}>{user.companyName}</Text>
             </View>
           )}
+          <View style={[P.badge, {
+            backgroundColor: user?.status === 'active' || user?.status === 'approved'
+              ? T.green + 'bb' : T.amber + 'bb',
+          }]}>
+            <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#fff' }} />
+            <Text style={P.badgeTxt}>{(user?.status || 'active').toUpperCase()}</Text>
+          </View>
         </View>
-      </LinearGradient>
+      </View>
 
-      {/* ── Tabs ── */}
-      <View style={ps.tabBar}>
+      {/* ── Tab bar ─────────────────────────────────────────────────────── */}
+      <View style={P.tabBar}>
         {availableTabs.map(id => {
-          const icons: Record<Tab, string>  = { account: 'person-outline', security: 'shield-outline', permissions: 'key-outline' };
-          const labels: Record<Tab, string> = { account: 'Account',        security: 'Security',        permissions: 'Permissions' };
+          const active = tab === id;
+          const cfg = tabCfg[id];
           return (
-            <TouchableOpacity key={id} style={[ps.tabBtn, tab === id && ps.tabBtnActive]} onPress={() => setTab(id)}>
-              <Ionicons name={icons[id] as any} size={16} color={tab === id ? WEEG_BLUE : Colors.gray500} />
-              <Text style={[ps.tabLabel, tab === id && { color: WEEG_BLUE, fontWeight: '700' }]}>{labels[id]}</Text>
+            <TouchableOpacity key={id} style={[P.tabBtn, active && P.tabBtnActive]}
+              onPress={() => setTab(id)}>
+              <Ionicons name={cfg.icon as any} size={15}
+                color={active ? T.blue : T.textMuted} />
+              <Text style={[P.tabLabel, active && P.tabLabelActive]}>{cfg.label}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ padding: Spacing.base, paddingBottom: 40 }}>
+      {/* ── Content ─────────────────────────────────────────────────────── */}
+      <ScrollView showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
 
-          {/* ── Account Tab ── */}
-          {tab === 'account' && (
-            <>
-              <View style={[ps.card, Shadow.sm, { marginBottom: 16 }]}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                  <Text style={ps.cardTitle}>My Information</Text>
-                  {!editing ? (
-                    <TouchableOpacity style={ps.editBtn} onPress={() => setEditing(true)}>
-                      <Ionicons name="pencil-outline" size={14} color={WEEG_BLUE} />
-                      <Text style={{ fontSize: 13, color: WEEG_BLUE, fontWeight: '600' }}>Edit</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity style={ps.editBtn} onPress={handleCancelEdit}>
-                      <Ionicons name="close-outline" size={14} color={Colors.gray500} />
-                      <Text style={{ fontSize: 13, color: Colors.gray500, fontWeight: '600' }}>Cancel</Text>
-                    </TouchableOpacity>
-                  )}
+        {/* ═══════════════════ ACCOUNT TAB ═══════════════════ */}
+        {tab === 'account' && (
+          <>
+            {/* My Information */}
+            <View style={P.card}>
+              <View style={P.cardHeader}>
+                <View style={P.cardIconWrap}>
+                  <Ionicons name="person-outline" size={16} color={T.blue} />
                 </View>
-
-                {!editing ? (
-                  <>
-                    {[
-                      { icon: 'person-outline',    label: 'Name',    value: user?.name || '—' },
-                      { icon: 'mail-outline',       label: 'Email',   value: user?.email || '—' },
-                      { icon: 'call-outline',       label: 'Phone',   value: user?.phoneNumber || '—' },
-                      { icon: 'briefcase-outline',  label: 'Role',    value: user?.role || '—', highlight: roleColor[user?.role || ''] },
-                      { icon: 'business-outline',   label: 'Company', value: user?.companyName || '—' },
-                      { icon: 'git-branch-outline', label: 'Branch',  value: user?.branchName || 'None', last: true },
-                    ].map((item, i) => (
-                      <View key={i} style={[ps.infoRowCard, (item as any).last && { borderBottomWidth: 0 }]}>
-                        <Ionicons name={item.icon as any} size={16} color={Colors.gray400} />
-                        <Text style={ps.infoLabel}>{item.label}</Text>
-                        <Text style={[ps.infoVal, item.highlight ? { color: item.highlight, fontWeight: '700', textTransform: 'capitalize' } : undefined]}>
-                          {item.value}
-                        </Text>
-                      </View>
-                    ))}
-                  </>
-                ) : (
-                  <>
-                    <Text style={ps.fieldLabel}>First Name *</Text>
-                    <View style={[ps.inputBox, { marginBottom: 12 }]}>
-                      <Ionicons name="person-outline" size={16} color={Colors.gray400} />
-                      <TextInput value={firstName} onChangeText={setFirstName} placeholder="First name" placeholderTextColor={Colors.gray400} style={ps.input} />
-                    </View>
-
-                    <Text style={ps.fieldLabel}>Last Name</Text>
-                    <View style={[ps.inputBox, { marginBottom: 12 }]}>
-                      <Ionicons name="person-outline" size={16} color={Colors.gray400} />
-                      <TextInput value={lastName} onChangeText={setLastName} placeholder="Last name" placeholderTextColor={Colors.gray400} style={ps.input} />
-                    </View>
-
-                    <Text style={ps.fieldLabel}>Phone Number</Text>
-                    <View style={[ps.inputBox, { marginBottom: 16 }]}>
-                      <Ionicons name="call-outline" size={16} color={Colors.gray400} />
-                      <TextInput value={phone} onChangeText={setPhone} placeholder="+216 XX XXX XXX" placeholderTextColor={Colors.gray400} keyboardType="phone-pad" style={ps.input} />
-                    </View>
-
-                    <Text style={ps.fieldLabel}>Email (cannot be changed)</Text>
-                    <View style={[ps.inputBox, { marginBottom: 16, backgroundColor: Colors.gray100 }]}>
-                      <Ionicons name="mail-outline" size={16} color={Colors.gray400} />
-                      <Text style={[ps.input, { color: Colors.gray500 }]}>{user?.email}</Text>
-                    </View>
-
-                    <TouchableOpacity onPress={handleSaveProfile} disabled={savingProfile}>
-                      <LinearGradient colors={[WEEG_NAVY, WEEG_BLUE, WEEG_ORANGE]} style={ps.saveBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                        {savingProfile
-                          ? <ActivityIndicator color="#fff" size="small" />
-                          : <><Ionicons name="checkmark-outline" size={16} color="#fff" /><Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Save Changes</Text></>
-                        }
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </>
-                )}
+                <Text style={P.cardTitle}>My Information</Text>
+                <TouchableOpacity
+                  style={[P.editPill, editing && P.editPillCancel]}
+                  onPress={() => editing ? (
+                    setFirstName(user?.name?.split(' ')[0] || ''),
+                    setLastName(user?.name?.split(' ').slice(1).join(' ') || ''),
+                    setPhone(user?.phoneNumber || ''),
+                    setEditing(false)
+                  ) : setEditing(true)}
+                >
+                  <Ionicons name={editing ? 'close-outline' : 'pencil-outline'} size={13}
+                    color={editing ? T.textSub : T.blue} />
+                  <Text style={[P.editPillTxt, editing && { color: T.textSub }]}>
+                    {editing ? 'Cancel' : 'Edit'}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
-              {/* Statut */}
-              <View style={[ps.card, Shadow.sm, { marginBottom: 16 }]}>
-                <Text style={ps.cardTitle}>Account Status</Text>
-                <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginTop: 10 }}>
-                  <View style={[ps.statusChip, { backgroundColor: user?.isVerified ? '#dcfce7' : '#fef9c3' }]}>
-                    <Ionicons name={user?.isVerified ? 'checkmark-circle' : 'time-outline'} size={14} color={user?.isVerified ? '#16a34a' : '#854d0e'} />
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: user?.isVerified ? '#16a34a' : '#854d0e' }}>
-                      {user?.isVerified ? 'Verified' : 'Pending'}
+              {!editing ? (
+                <View style={{ marginTop: 4 }}>
+                  <InfoRow icon="person-outline"   label="Name"  value={user?.name || '—'} />
+                  <InfoRow icon="mail-outline"      label="Email" value={user?.email || '—'} />
+                  <InfoRow icon="briefcase-outline" label="Role"  value={user?.role || '—'}
+                    accent={roleColors[user?.role || '']} />
+                  {/* Phone & Company uniquement pour manager et agent */}
+                  {user?.role !== 'admin' && (
+                    <InfoRow icon="call-outline" label="Phone" value={user?.phoneNumber || '—'} />
+                  )}
+                  {user?.role !== 'admin' && (
+                    <InfoRow icon="business-outline" label="Company" value={user?.companyName || '—'} />
+                  )}
+                </View>
+              ) : (
+                <View style={{ marginTop: 8 }}>
+                  <FieldInput label="First Name *" value={firstName} onChange={setFirstName}
+                    placeholder="First name" icon="person-outline" />
+                  <FieldInput label="Last Name" value={lastName} onChange={setLastName}
+                    placeholder="Last name" icon="person-outline" />
+                  {/* Phone uniquement pour non-admin */}
+                  {user?.role !== 'admin' && (
+                    <FieldInput label="Phone Number" value={phone} onChange={setPhone}
+                      placeholder="+216 XX XXX XXX" icon="call-outline" keyboardType="phone-pad" />
+                  )}
+                  <FieldInput label="Email (cannot be changed)" value={user?.email || ''}
+                    onChange={() => {}} placeholder="" icon="mail-outline" editable={false} />
+
+                  <TouchableOpacity onPress={handleSaveProfile} disabled={savingProfile}
+                    style={{ marginTop: 4 }}>
+                    <LinearGradient colors={[T.navy, T.blue, T.orange]} style={P.primaryBtn}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                      {savingProfile
+                        ? <ActivityIndicator color="#fff" size="small" />
+                        : <><Ionicons name="checkmark-outline" size={16} color="#fff" />
+                            <Text style={P.primaryBtnTxt}>Save Changes</Text></>
+                      }
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Account Status — masqué pour admin */}
+            {user?.role !== 'admin' && (
+              <View style={[P.card, { marginTop: 12 }]}>
+                <View style={P.cardHeader}>
+                  <View style={P.cardIconWrap}>
+                    <Ionicons name="shield-checkmark-outline" size={16} color={T.blue} />
+                  </View>
+                  <Text style={P.cardTitle}>Account Status</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                  <View style={[P.statusChip, {
+                    backgroundColor: user?.isVerified ? T.greenBg : T.amberBg,
+                  }]}>
+                    <Ionicons
+                      name={user?.isVerified ? 'checkmark-circle' : 'time-outline'}
+                      size={13}
+                      color={user?.isVerified ? T.green : T.amber}
+                    />
+                    <Text style={[P.statusChipTxt, {
+                      color: user?.isVerified ? T.green : T.amber,
+                    }]}>
+                      {user?.isVerified ? 'Verified' : 'Pending Verification'}
                     </Text>
                   </View>
-                  <View style={[ps.statusChip, { backgroundColor: '#eff6ff' }]}>
-                    <Ionicons name="ellipse" size={8} color={WEEG_BLUE} />
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: WEEG_BLUE, textTransform: 'capitalize' }}>
+                  <View style={[P.statusChip, { backgroundColor: T.blueBg }]}>
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: T.blue }} />
+                    <Text style={[P.statusChipTxt, { color: T.blue, textTransform: 'capitalize' }]}>
                       {user?.status || 'active'}
                     </Text>
                   </View>
                 </View>
               </View>
+            )}
 
-              {/* Déconnexion */}
-              <TouchableOpacity
-                style={[ps.logoutBtn, Shadow.sm]}
-                onPress={() => Alert.alert('Log Out', 'Are you sure?', [
-                  { text: 'Cancel' },
-                  { text: 'Log Out', style: 'destructive', onPress: logout },
-                ])}
-              >
-                <Ionicons name="log-out-outline" size={18} color="#dc2626" />
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#dc2626' }}>Log Out</Text>
-              </TouchableOpacity>
-            </>
-          )}
+            {/* Logout */}
+            <TouchableOpacity style={P.logoutBtn} onPress={() =>
+              Alert.alert('Log Out', 'Are you sure?', [
+                { text: 'Cancel' },
+                { text: 'Log Out', style: 'destructive', onPress: logout },
+              ])
+            }>
+              <Ionicons name="log-out-outline" size={17} color={T.red} />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: T.red }}>Log Out</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
-          {/* ── Security Tab ── */}
-          {tab === 'security' && (
-            <>
-              <View style={[ps.card, Shadow.sm, { marginBottom: 16 }]}>
-                <Text style={ps.cardTitle}>Change Password</Text>
-                <Text style={{ fontSize: 12, color: Colors.gray500, marginBottom: 16 }}>
-                  After changing, all sessions will be closed.
-                </Text>
-                {[
-                  { label: 'Current Password',      value: oldPw,     setter: setOldPw,     show: showOld, toggle: () => setShowOld(!showOld) },
-                  { label: 'New Password',           value: newPw,     setter: setNewPw,     show: showNew, toggle: () => setShowNew(!showNew) },
-                  { label: 'Confirm New Password',   value: confirmPw, setter: setConfirmPw, show: showNew, toggle: undefined },
-                ].map((field, i) => (
-                  <View key={i} style={{ marginBottom: 14 }}>
-                    <Text style={ps.fieldLabel}>{field.label}</Text>
-                    <View style={ps.inputBox}>
-                      <Ionicons name="lock-closed-outline" size={16} color={Colors.gray400} />
-                      <TextInput
-                        value={field.value} onChangeText={field.setter}
-                        secureTextEntry={!field.show}
-                        placeholder="••••••••" placeholderTextColor={Colors.gray400}
-                        style={ps.input} editable={!savingPw}
-                      />
-                      {field.toggle && (
-                        <TouchableOpacity onPress={field.toggle}>
-                          <Ionicons name={field.show ? 'eye-off-outline' : 'eye-outline'} size={18} color={Colors.gray400} />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                ))}
-                <TouchableOpacity onPress={handleChangePassword} disabled={savingPw}>
-                  <LinearGradient colors={[WEEG_NAVY, WEEG_BLUE, WEEG_ORANGE]} style={ps.saveBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+        {/* ═══════════════════ SECURITY TAB ═══════════════════ */}
+        {tab === 'security' && (
+          <>
+            {/* Change Password */}
+            <View style={P.card}>
+              <View style={P.cardHeader}>
+                <View style={P.cardIconWrap}>
+                  <Ionicons name="lock-closed-outline" size={16} color={T.blue} />
+                </View>
+                <View>
+                  <Text style={P.cardTitle}>Change Password</Text>
+                  <Text style={{ fontSize: 11, color: T.textMuted, marginTop: 1 }}>
+                    All sessions will be closed after change
+                  </Text>
+                </View>
+              </View>
+              <View style={{ marginTop: 8 }}>
+                <FieldInput label="Current Password" value={oldPw} onChange={setOldPw}
+                  placeholder="••••••••" icon="lock-closed-outline" secure showToggle />
+                <FieldInput label="New Password" value={newPw} onChange={setNewPw}
+                  placeholder="Min. 8 characters" icon="lock-open-outline" secure showToggle />
+                <FieldInput label="Confirm New Password" value={confirmPw} onChange={setConfirmPw}
+                  placeholder="Repeat new password" icon="lock-open-outline" secure showToggle />
+                <TouchableOpacity onPress={handleChangePassword} disabled={savingPw} style={{ marginTop: 4 }}>
+                  <LinearGradient colors={[T.navy, T.blue, T.orange]} style={P.primaryBtn}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
                     {savingPw
                       ? <ActivityIndicator color="#fff" size="small" />
-                      : <><Ionicons name="lock-closed-outline" size={16} color="#fff" /><Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Update Password</Text></>
+                      : <><Ionicons name="lock-closed-outline" size={16} color="#fff" />
+                          <Text style={P.primaryBtnTxt}>Update Password</Text></>
                     }
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
+            </View>
 
-              <View style={[ps.card, Shadow.sm]}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                  <Text style={ps.cardTitle}>Active Sessions</Text>
-                  <TouchableOpacity onPress={loadSessions}>
-                    <Ionicons name="refresh-outline" size={18} color={WEEG_BLUE} />
-                  </TouchableOpacity>
+            {/* Active Sessions */}
+            <View style={[P.card, { marginTop: 12 }]}>
+              <View style={P.cardHeader}>
+                <View style={P.cardIconWrap}>
+                  <Ionicons name="phone-portrait-outline" size={16} color={T.blue} />
                 </View>
-                {loadingSessions ? (
-                  <ActivityIndicator color={WEEG_BLUE} />
-                ) : sessions.length === 0 ? (
-                  <Text style={{ fontSize: 13, color: Colors.gray400, textAlign: 'center', marginVertical: 16 }}>
-                    No active sessions found
-                  </Text>
-                ) : sessions.map((s, i) => (
-                  <View key={s.id} style={[ps.sessionRow, i === sessions.length - 1 && { borderBottomWidth: 0 }]}>
-                    <View style={ps.sessionIcon}>
-                      <Ionicons name="phone-portrait-outline" size={18} color={WEEG_BLUE} />
+                <Text style={P.cardTitle}>Active Sessions</Text>
+                <TouchableOpacity onPress={loadSessions} style={P.refreshBtn}>
+                  <Ionicons name="refresh-outline" size={15} color={T.blue} />
+                </TouchableOpacity>
+              </View>
+
+              {loadingSessions ? (
+                <ActivityIndicator color={T.blue} style={{ marginVertical: 20 }} />
+              ) : sessions.length === 0 ? (
+                <View style={P.emptyState}>
+                  <Ionicons name="phone-portrait-outline" size={30} color={T.textMuted} />
+                  <Text style={P.emptyStateTxt}>No active sessions found</Text>
+                </View>
+              ) : (
+                sessions.map((s, i) => (
+                  <View key={s.id} style={[P.sessionRow,
+                    i === sessions.length - 1 && { borderBottomWidth: 0 }]}>
+                    <View style={[P.sessionIcon, s.is_current && { backgroundColor: T.blueBg }]}>
+                      <Ionicons name="phone-portrait-outline" size={16}
+                        color={s.is_current ? T.blue : T.textMuted} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: Colors.foreground }}>{s.device_name || 'Unknown device'}</Text>
-                      <Text style={{ fontSize: 11, color: Colors.gray500 }}>{s.ip_address}</Text>
-                      <Text style={{ fontSize: 10, color: Colors.gray400 }}>Last active: {new Date(s.last_activity).toLocaleString()}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: T.text }}>
+                        {s.device_name || 'Unknown device'}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: T.textMuted }}>{s.ip_address}</Text>
+                      <Text style={{ fontSize: 10, color: T.textMuted, marginTop: 1 }}>
+                        {new Date(s.last_activity).toLocaleString()}
+                      </Text>
                     </View>
                     {!s.is_current ? (
-                      <TouchableOpacity onPress={() => handleRevokeSession(s.id)} style={ps.revokeBtn}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#dc2626' }}>Revoke</Text>
+                      <TouchableOpacity onPress={() => handleRevokeSession(s.id)} style={P.revokeBtn}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: T.red }}>Revoke</Text>
                       </TouchableOpacity>
                     ) : (
-                      <View style={ps.currentBadge}>
-                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#16a34a' }}>Current</Text>
+                      <View style={P.currentBadge}>
+                        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: T.green }} />
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: T.green }}>Current</Text>
                       </View>
                     )}
                   </View>
-                ))}
-                {sessions.length > 0 && (
-                  <TouchableOpacity style={{ marginTop: 12 }} onPress={handleLogoutAll}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#dc2626', textAlign: 'center' }}>
-                      Log out all devices
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </>
-          )}
+                ))
+              )}
 
-          {/* ── Permissions Tab (agent uniquement) ── */}
-          {tab === 'permissions' && user?.role === 'agent' && (
-            <View style={[ps.card, Shadow.sm]}>
-              <Text style={ps.cardTitle}>My Permissions</Text>
-              <Text style={{ fontSize: 12, color: Colors.gray500, marginBottom: 14 }}>
-                Features and access granted to your account ({(user?.permissions || []).length} permissions)
-              </Text>
-              {(user?.permissions || []).length === 0 ? (
-                <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-                  <Ionicons name="key-outline" size={36} color={Colors.gray300} />
-                  <Text style={{ fontSize: 13, color: Colors.gray400, marginTop: 8 }}>No permissions assigned yet</Text>
-                </View>
-              ) : (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {(user?.permissions || []).map((p: string, i: number) => (
-                    <View key={i} style={ps.permChip}>
-                      <Ionicons name="checkmark-circle" size={13} color="#16a34a" />
-                      <Text style={ps.permChipTxt}>{p.replace(/-/g, ' ')}</Text>
-                    </View>
-                  ))}
-                </View>
+              {sessions.length > 0 && (
+                <TouchableOpacity onPress={handleLogoutAll} style={P.logoutAllBtn}>
+                  <Ionicons name="log-out-outline" size={14} color={T.red} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: T.red }}>
+                    Log out all devices
+                  </Text>
+                </TouchableOpacity>
               )}
             </View>
-          )}
+          </>
+        )}
 
-        </View>
+        {/* ═══════════════════ PERMISSIONS TAB ═══════════════════ */}
+        {tab === 'permissions' && user?.role === 'agent' && (
+          <View style={P.card}>
+            <View style={P.cardHeader}>
+              <View style={P.cardIconWrap}>
+                <Ionicons name="key-outline" size={16} color={T.blue} />
+              </View>
+              <View>
+                <Text style={P.cardTitle}>My Permissions</Text>
+                <Text style={{ fontSize: 11, color: T.textMuted, marginTop: 1 }}>
+                  {(user?.permissions || []).length} permissions granted
+                </Text>
+              </View>
+            </View>
+
+            {(user?.permissions || []).length === 0 ? (
+              <View style={P.emptyState}>
+                <Ionicons name="key-outline" size={34} color={T.textMuted} />
+                <Text style={P.emptyStateTxt}>No permissions assigned yet</Text>
+                <Text style={{ fontSize: 11, color: T.textMuted, textAlign: 'center', marginTop: 4 }}>
+                  Contact your manager to request access
+                </Text>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                {(user?.permissions || []).map((p: string, i: number) => (
+                  <View key={i} style={P.permChip}>
+                    <Ionicons name="checkmark-circle" size={12} color={T.green} />
+                    <Text style={P.permChipTxt}>{p.replace(/-/g, ' ')}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
       </ScrollView>
     </View>
   );
@@ -417,89 +523,178 @@ export function ProfileScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const ps = StyleSheet.create({
-  // Header dark navy → bleu → orange (style splash Weeg)
-  profileHeader: {
+const P = StyleSheet.create({
+  // Header
+  header: {
+    backgroundColor: T.navy,
     paddingHorizontal: 24,
-    paddingTop: 32,
+    paddingTop: 48,
     paddingBottom: 28,
     alignItems: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  headerCircle1: {
+    position: 'absolute', width: 200, height: 200, borderRadius: 100,
+    borderWidth: 1, borderColor: 'rgba(26,111,232,0.12)',
+    top: -60, right: -60,
+  },
+  headerCircle2: {
+    position: 'absolute', width: 120, height: 120, borderRadius: 60,
+    borderWidth: 1, borderColor: 'rgba(232,124,26,0.1)',
+    bottom: -20, left: -20,
   },
   avatarRing: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    borderWidth: 3,
-    borderColor: WEEG_ORANGE,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 88, height: 88, borderRadius: 44,
+    borderWidth: 2, borderColor: T.orange,
+    padding: 3,
     marginBottom: 14,
   },
   avatar: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex: 1, borderRadius: 40,
+    alignItems: 'center', justifyContent: 'center',
   },
-  avatarTxt:   { fontSize: 30, fontWeight: '900', color: '#fff' },
-  profileName: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 6 },
-
-  // Email en ligne avec icône sous le nom
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginBottom: 12,
-  },
-  infoTxt: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
-
-  // Badges rôle + company
-  badgeRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' },
+  avatarTxt:   { fontSize: 28, fontWeight: '900', color: T.white, letterSpacing: 1 },
+  headerName:  { fontSize: 22, fontWeight: '800', color: T.white, letterSpacing: -0.3, marginBottom: 5 },
   badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99,
   },
-  badgeTxt: { fontSize: 11, fontWeight: '800', color: '#fff' },
+  badgeTxt: { fontSize: 10, fontWeight: '800', color: T.white, letterSpacing: 0.5 },
 
   // Tab bar
-  tabBar:      { flexDirection: 'row', backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.gray100 },
-  tabBtn:      { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabBtnActive:{ borderBottomColor: WEEG_BLUE },
-  tabLabel:    { fontSize: 11, fontWeight: '500', color: Colors.gray500 },
+  tabBar: {
+    flexDirection: 'row', backgroundColor: T.card,
+    borderBottomWidth: 1, borderBottomColor: T.border,
+  },
+  tabBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 5, paddingVertical: 13,
+    borderBottomWidth: 2, borderBottomColor: 'transparent',
+  },
+  tabBtnActive:   { borderBottomColor: T.blue },
+  tabLabel:       { fontSize: 12, fontWeight: '500', color: T.textMuted },
+  tabLabelActive: { color: T.blue, fontWeight: '700' },
 
-  // Cards
-  card:      { backgroundColor: Colors.white, borderRadius: BorderRadius.xl, padding: 16, borderWidth: 1, borderColor: Colors.gray100 },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: Colors.foreground },
-  editBtn:   { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BorderRadius.lg, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe' },
+  // Card
+  card: {
+    backgroundColor: T.card,
+    borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: T.border,
+    shadowColor: '#0a1628',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4,
+  },
+  cardIconWrap: {
+    width: 30, height: 30, borderRadius: 9,
+    backgroundColor: T.blueBg, alignItems: 'center', justifyContent: 'center',
+  },
+  cardTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: T.text },
 
-  // Lignes info (dans la card)
-  infoRowCard: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.gray50 },
-  infoLabel:   { fontSize: 13, color: Colors.gray500, width: 70 },
-  infoVal:     { flex: 1, fontSize: 13, fontWeight: '500', color: Colors.foreground, textAlign: 'right' },
+  // Edit pill
+  editPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 8, backgroundColor: T.blueBg,
+    borderWidth: 1, borderColor: '#bfdbfe',
+  },
+  editPillCancel: { backgroundColor: T.surface, borderColor: T.border },
+  editPillTxt:    { fontSize: 12, fontWeight: '600', color: T.blue },
 
-  // Formulaire
-  fieldLabel: { fontSize: 12, fontWeight: '600', color: Colors.foreground, marginBottom: 6 },
-  inputBox:   { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: Colors.gray200, borderRadius: BorderRadius.lg, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: Colors.gray50 },
-  input:      { flex: 1, fontSize: 14, color: Colors.foreground },
-  saveBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: BorderRadius.lg },
+  // Info row
+  infoRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 11,
+    borderBottomWidth: 1, borderBottomColor: T.borderLight,
+  },
+  infoIconWrap: {
+    width: 26, height: 26, borderRadius: 8,
+    backgroundColor: T.blueBg, alignItems: 'center', justifyContent: 'center',
+  },
+  infoLabel:    { fontSize: 12, color: T.textMuted, width: 62 },
+  infoValue:    { flex: 1, fontSize: 13, fontWeight: '500', color: T.text, textAlign: 'right' },
 
-  // Status
-  statusChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: BorderRadius.full },
-  logoutBtn:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: Colors.white, borderRadius: BorderRadius.xl, paddingVertical: 16, borderWidth: 1, borderColor: '#fecaca' },
+  // Form
+  fieldLabel: { fontSize: 11, fontWeight: '700', color: T.textSub, marginBottom: 6,
+                textTransform: 'uppercase', letterSpacing: 0.5 },
+  inputBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1.5, borderColor: T.border,
+    borderRadius: 12, paddingHorizontal: 13, paddingVertical: 11,
+    backgroundColor: T.surface,
+  },
+  input: { flex: 1, fontSize: 14, color: T.text },
+
+  // Primary button
+  primaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 14, borderRadius: 12,
+  },
+  primaryBtnTxt: { fontSize: 14, fontWeight: '700', color: T.white },
+
+  // Status chips
+  statusChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99,
+  },
+  statusChipTxt: { fontSize: 12, fontWeight: '700' },
+
+  // Logout
+  logoutBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: T.card, borderRadius: 14,
+    paddingVertical: 15, marginTop: 12,
+    borderWidth: 1.5, borderColor: '#fecaca',
+    shadowColor: T.red, shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+  },
 
   // Sessions
-  sessionRow:  { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.gray50 },
-  sessionIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center' },
-  revokeBtn:   { paddingHorizontal: 10, paddingVertical: 5, borderRadius: BorderRadius.lg, backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca' },
-  currentBadge:{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: BorderRadius.lg, backgroundColor: '#dcfce7' },
+  refreshBtn: {
+    width: 30, height: 30, borderRadius: 9,
+    backgroundColor: T.blueBg, alignItems: 'center', justifyContent: 'center',
+  },
+  sessionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: T.borderLight,
+  },
+  sessionIcon: {
+    width: 38, height: 38, borderRadius: 11,
+    backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center',
+  },
+  revokeBtn: {
+    paddingHorizontal: 11, paddingVertical: 6, borderRadius: 8,
+    backgroundColor: T.redBg, borderWidth: 1, borderColor: '#fecaca',
+  },
+  currentBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 9, paddingVertical: 5, borderRadius: 8,
+    backgroundColor: T.greenBg,
+  },
+  logoutAllBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, marginTop: 14, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: T.borderLight,
+  },
+
+  // Empty state
+  emptyState: {
+    alignItems: 'center', paddingVertical: 28, gap: 8,
+  },
+  emptyStateTxt: { fontSize: 13, color: T.textMuted, fontWeight: '500' },
 
   // Permissions
-  permChip:    { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: Colors.gray50, borderRadius: BorderRadius.full, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: Colors.gray100 },
-  permChipTxt: { fontSize: 11, color: Colors.foreground, fontWeight: '500', textTransform: 'capitalize' },
+  permChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: T.surface, borderRadius: 99,
+    paddingHorizontal: 11, paddingVertical: 6,
+    borderWidth: 1, borderColor: T.border,
+  },
+  permChipTxt: { fontSize: 11, color: T.text, fontWeight: '500', textTransform: 'capitalize' },
 });

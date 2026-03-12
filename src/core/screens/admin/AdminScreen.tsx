@@ -1,11 +1,12 @@
 /**
- * AdminScreen.tsx — Panel Admin WEEG
- * Tabs : Pending · Managers · Agents · Suspended · All
- * Actions : Approve/Reject managers | Suspend/Reactivate | Edit agent permissions
+ * AdminScreen.tsx — Panel Admin WEEG — v3
  *
- * FIXES :
- *  1. Managers tab : filtre sans status (managers réactivés visibles)
- *  2. Tab bar fixée (height: 48 + zIndex + wrapper View) pour éviter disparition au scroll
+ * Droits admin :
+ *   • Approuver / Rejeter les demandes manager  (onglet Pending)
+ *   • Voir la liste des agents                  (onglet Agents) — lecture seule
+ *   • Suspendre / Réactiver les managers        (Managers / Suspended / All)
+ *
+ * Les permissions agents sont gérées par les managers, pas par l'admin.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -15,247 +16,186 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius, Shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { AdminService } from '../../lib/api';
 
-const INDIGO = '#4f46e5';
-const INDIGO_LIGHT = '#eef2ff';
-const INDIGO_BORDER = '#c7d2fe';
-const VIOLET = '#7c3aed';
-const GREEN = '#16a34a';
-const RED = '#dc2626';
+// ─── Palette ──────────────────────────────────────────────────────────────────
+const P = {
+  indigo:      '#4338ca',
+  indigoLight: '#e0e7ff',
+  indigoDark:  '#312e81',
+  violet:      '#7c3aed',
+  sky:         '#0284c7',
+  green:       '#059669',
+  greenLight:  '#d1fae5',
+  amber:       '#d97706',
+  amberLight:  '#fef3c7',
+  red:         '#dc2626',
+  redLight:    '#fee2e2',
+  slate50:     '#f8fafc',
+  slate100:    '#f1f5f9',
+  slate200:    '#e2e8f0',
+  slate300:    '#cbd5e1',
+  slate400:    '#94a3b8',
+  slate500:    '#64748b',
+  slate600:    '#475569',
+  slate700:    '#334155',
+  slate900:    '#0f172a',
+  white:       '#ffffff',
+};
 
 type AdminTab = 'pending' | 'managers' | 'agents' | 'suspended' | 'all';
 
-// ─── Permissions ──────────────────────────────────────────────────────────────
+// ─── Composants visuels ───────────────────────────────────────────────────────
 
-const PERMISSIONS_GROUPS = [
-  { group: 'Data Management', items: [
-    { id: 'import-data', label: 'Import Data', desc: 'Import Excel files' },
-    { id: 'export-data', label: 'Export Data', desc: 'Export to Excel/CSV' },
-  ]},
-  { group: 'Analytics & Reports', items: [
-    { id: 'view-dashboard', label: 'View Dashboard', desc: 'Access main dashboard with KPIs' },
-    { id: 'view-reports', label: 'View Reports', desc: 'Access and view all reports' },
-    { id: 'generate-reports', label: 'Generate Reports', desc: 'Create custom reports' },
-    { id: 'view-kpi', label: 'View KPIs', desc: 'Access KPI engine and metrics' },
-    { id: 'filter-dashboard', label: 'Filter Dashboard', desc: 'Apply filters to dashboard' },
-    { id: 'ai-insights', label: 'AI Insights', desc: 'Access AI-powered insights' },
-  ]},
-  { group: 'Sales & Inventory', items: [
-    { id: 'view-sales', label: 'View Sales', desc: 'Access sales and purchases data' },
-    { id: 'view-inventory', label: 'View Inventory', desc: 'Check product availability' },
-    { id: 'view-customer-payments', label: 'Customer Payments', desc: 'Access payment history' },
-    { id: 'view-aging', label: 'Aging Receivables', desc: 'Track overdue payments' },
-  ]},
-  { group: 'System Access', items: [
-    { id: 'receive-notifications', label: 'Notifications', desc: 'Get notified about events' },
-    { id: 'manage-alerts', label: 'Manage Alerts', desc: 'Mark alerts as resolved' },
-    { id: 'view-profile', label: 'View Profile', desc: 'Access personal profile' },
-    { id: 'change-password', label: 'Change Password', desc: 'Update account password' },
-  ]},
-];
-
-const DEFAULT_PERMS = [
-  'view-dashboard', 'view-reports', 'generate-reports', 'view-kpi',
-  'filter-dashboard', 'view-sales', 'view-inventory', 'view-customer-payments',
-  'receive-notifications', 'manage-alerts', 'view-profile', 'change-password',
-];
-const ALL_PERMS = PERMISSIONS_GROUPS.flatMap(g => g.items.map(i => i.id));
-
-// ─── Composants utilitaires ───────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: string }) {
-  const cfg: Record<string, { bg: string; color: string; label: string }> = {
-    approved: { bg: '#dcfce7', color: GREEN,    label: 'Approved' },
-    pending:  { bg: '#fef9c3', color: '#854d0e', label: 'Pending' },
-    rejected: { bg: '#fee2e2', color: RED,       label: 'Rejected' },
-    suspended:{ bg: '#fee2e2', color: RED,       label: 'Suspended' },
-    active:   { bg: '#dcfce7', color: GREEN,    label: 'Active' },
+function StatusPill({ status }: { status: string }) {
+  const map: Record<string, { bg: string; color: string; dot: string; label: string }> = {
+    approved:  { bg: P.greenLight, color: P.green, dot: P.green, label: 'Approved'  },
+    active:    { bg: P.greenLight, color: P.green, dot: P.green, label: 'Active'    },
+    pending:   { bg: P.amberLight, color: P.amber, dot: P.amber, label: 'Pending'   },
+    rejected:  { bg: P.redLight,   color: P.red,   dot: P.red,   label: 'Rejected'  },
+    suspended: { bg: P.redLight,   color: P.red,   dot: P.red,   label: 'Suspended' },
   };
-  const c = cfg[status] || { bg: Colors.gray100, color: Colors.gray500, label: status };
+  const c = map[status] || { bg: P.slate100, color: P.slate500, dot: P.slate400, label: status };
   return (
-    <View style={{ backgroundColor: c.bg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full }}>
-      <Text style={{ fontSize: 11, fontWeight: '700', color: c.color }}>{c.label}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5,
+      backgroundColor: c.bg, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99 }}>
+      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.dot }} />
+      <Text style={{ fontSize: 11, fontWeight: '700', color: c.color, letterSpacing: 0.3 }}>
+        {c.label}
+      </Text>
     </View>
   );
 }
 
-function RoleBadge({ role }: { role: string }) {
-  const color = role === 'manager' ? '#2563eb' : VIOLET;
+function RolePill({ role }: { role: string }) {
+  const color = role === 'manager' ? P.sky : P.violet;
+  const icon  = role === 'manager' ? 'briefcase-outline' : 'person-outline';
   return (
-    <View style={{ backgroundColor: color + '18', paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full }}>
-      <Text style={{ fontSize: 11, fontWeight: '700', color }}>{role}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4,
+      backgroundColor: color + '18', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99 }}>
+      <Ionicons name={icon as any} size={10} color={color} />
+      <Text style={{ fontSize: 11, fontWeight: '700', color, textTransform: 'capitalize' }}>
+        {role}
+      </Text>
     </View>
   );
 }
 
-function UserAvatar({ name, color = Colors.gray400 }: { name: string; color?: string }) {
+function Avatar({ name, color }: { name: string; color: string }) {
+  const initials = name.split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase() || '?';
   return (
-    <View style={[ad.avatar, { backgroundColor: color }]}>
-      <Text style={ad.avatarTxt}>{(name || '?').charAt(0).toUpperCase()}</Text>
+    <LinearGradient colors={[color, color + 'cc']} style={S.avatar}
+      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+      <Text style={S.avatarTxt}>{initials}</Text>
+    </LinearGradient>
+  );
+}
+
+function Tag({ icon, label }: { icon: string; label: string }) {
+  return (
+    <View style={S.tag}>
+      <Ionicons name={icon as any} size={10} color={P.slate500} />
+      <Text style={S.tagTxt} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
 
-// ─── Modal permissions ────────────────────────────────────────────────────────
+type ActionVariant = 'approve' | 'reject' | 'suspend' | 'reactivate';
 
-function PermList({ perms, setPerms }: { perms: string[]; setPerms: (p: string[]) => void }) {
-  const toggle = (id: string) =>
-    setPerms(perms.includes(id) ? perms.filter(p => p !== id) : [...perms, id]);
-
-  const toggleGroup = (ids: string[]) => {
-    const allIn = ids.every(id => perms.includes(id));
-    setPerms(allIn ? perms.filter(p => !ids.includes(p)) : [...new Set([...perms, ...ids])]);
+function ActionBtn({ label, icon, variant, onPress }:
+  { label: string; icon: string; variant: ActionVariant; onPress: () => void }) {
+  const cfg: Record<ActionVariant, { bg: string; border: string; text: string }> = {
+    approve:    { bg: P.green,      border: P.green,    text: P.white  },
+    reject:     { bg: P.redLight,   border: '#fecaca',  text: P.red    },
+    suspend:    { bg: '#fff1f2',    border: '#fecaca',  text: P.red    },
+    reactivate: { bg: P.greenLight, border: '#6ee7b7',  text: P.green  },
   };
-
+  const st = cfg[variant];
   return (
-    <View>
-      {PERMISSIONS_GROUPS.map((group, gi) => {
-        const ids = group.items.map(i => i.id);
-        const allIn = ids.every(id => perms.includes(id));
-        return (
-          <View key={gi} style={{ marginBottom: 16 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.foreground }}>{group.group}</Text>
-              <TouchableOpacity onPress={() => toggleGroup(ids)}>
-                <Text style={{ fontSize: 11, color: INDIGO, fontWeight: '600' }}>
-                  {allIn ? 'Deselect All' : 'Select All'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            {group.items.map(item => {
-              const checked = perms.includes(item.id);
-              return (
-                <TouchableOpacity key={item.id} style={ad.permRow} onPress={() => toggle(item.id)}>
-                  <View style={[ad.checkbox, checked && ad.checkboxOn]}>
-                    {checked && <Ionicons name="checkmark" size={11} color="#fff" />}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: Colors.foreground }}>{item.label}</Text>
-                    <Text style={{ fontSize: 11, color: Colors.gray500 }}>{item.desc}</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-function PermissionsModal({
-  agent, onClose, onSave,
-}: {
-  agent: any;
-  onClose: () => void;
-  onSave: (id: string, p: string[]) => Promise<void>;
-}) {
-  const [perms, setPerms] = useState<string[]>(agent?.permissions_list || []);
-  const [saving, setSaving] = useState(false);
-
-  return (
-    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: Colors.white }}>
-        <View style={ad.modalHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={ad.modalTitle}>Manage Permissions</Text>
-            <Text style={{ fontSize: 12, color: Colors.gray500 }}>
-              {agent?.first_name} {agent?.last_name} · {perms.length} selected
-            </Text>
-          </View>
-          <TouchableOpacity onPress={onClose}>
-            <Ionicons name="close" size={20} color={Colors.gray500} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ flexDirection: 'row', gap: 8, padding: 16, borderBottomWidth: 1, borderBottomColor: Colors.gray100 }}>
-          {([['Default', DEFAULT_PERMS], ['All', ALL_PERMS], ['None', [] as string[]]] as const).map(([label, p]) => (
-            <TouchableOpacity key={label} style={ad.quickBtn} onPress={() => setPerms(p as string[])}>
-              <Text style={ad.quickTxt}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <ScrollView contentContainerStyle={{ padding: 16 }}>
-          <PermList perms={perms} setPerms={setPerms} />
-        </ScrollView>
-
-        <View style={ad.modalFooter}>
-          <TouchableOpacity style={ad.cancelBtn} onPress={onClose}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.foreground }}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            disabled={saving}
-            onPress={async () => {
-              setSaving(true);
-              await onSave(agent.id, perms);
-              setSaving(false);
-              onClose();
-            }}
-            style={{ flex: 2 }}
-          >
-            <LinearGradient colors={[INDIGO, VIOLET]} style={ad.saveBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-              {saving
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Save Permissions</Text>
-              }
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
+    <TouchableOpacity onPress={onPress}
+      style={[S.actionBtn, { backgroundColor: st.bg, borderColor: st.border }]}>
+      <Ionicons name={icon as any} size={12} color={st.text} />
+      <Text style={{ fontSize: 11, fontWeight: '700', color: st.text }}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
 // ─── Modal rejet ──────────────────────────────────────────────────────────────
 
-function RejectModal({
-  manager, onClose, onReject,
-}: {
-  manager: any;
-  onClose: () => void;
-  onReject: (r: string) => void;
-}) {
+function RejectModal({ manager, onClose, onReject }:
+  { manager: any; onClose: () => void; onReject: (r: string) => void }) {
   const [reason, setReason] = useState('');
+  const quickReasons = [
+    'Incomplete information',
+    'Unverified company',
+    'Duplicate account',
+    'Invalid email domain',
+  ];
+
   return (
     <Modal visible animationType="slide" presentationStyle="formSheet" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: Colors.white, padding: 24, paddingTop: 32 }}>
-        <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.foreground, marginBottom: 8 }}>
-          Reject Request
+      <View style={{ flex: 1, backgroundColor: P.white, padding: 24, paddingTop: 32 }}>
+
+        {/* Header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: P.redLight,
+            alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="close-circle-outline" size={24} color={P.red} />
+          </View>
+          <View>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: P.slate900 }}>Reject Request</Text>
+            <Text style={{ fontSize: 12, color: P.slate400 }}>
+              {manager?.first_name} {manager?.last_name}
+            </Text>
+          </View>
+        </View>
+
+        {/* Quick reasons */}
+        <Text style={{ fontSize: 13, fontWeight: '600', color: P.slate600, marginBottom: 10 }}>
+          Quick reasons
         </Text>
-        <Text style={{ fontSize: 13, color: Colors.gray500, marginBottom: 20 }}>
-          Provide a reason for rejecting {manager?.first_name}'s request.
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+          {quickReasons.map(r => (
+            <TouchableOpacity key={r} onPress={() => setReason(r)}
+              style={[S.quickReason, reason === r && S.quickReasonActive]}>
+              <Text style={{ fontSize: 12, fontWeight: '600',
+                color: reason === r ? P.indigo : P.slate500 }}>{r}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Custom */}
+        <Text style={{ fontSize: 13, fontWeight: '600', color: P.slate600, marginBottom: 8 }}>
+          Or write a custom reason
         </Text>
         <TextInput
           value={reason}
           onChangeText={setReason}
           multiline
           numberOfLines={4}
-          placeholder="e.g. Incomplete information, unverified company..."
-          placeholderTextColor={Colors.gray400}
-          style={{
-            borderWidth: 1, borderColor: Colors.gray200, borderRadius: BorderRadius.lg,
-            padding: 12, fontSize: 14, color: Colors.foreground,
-            backgroundColor: Colors.gray50, minHeight: 100, textAlignVertical: 'top',
-          }}
+          placeholder="Describe why this request is being rejected..."
+          placeholderTextColor={P.slate400}
+          style={S.rejectInput}
         />
+
+        {/* Buttons */}
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
-          <TouchableOpacity style={[ad.cancelBtn, { flex: 1 }]} onPress={onClose}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.foreground }}>Cancel</Text>
+          <TouchableOpacity style={[S.cancelBtn, { flex: 1 }]} onPress={onClose}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: P.slate600 }}>Cancel</Text>
           </TouchableOpacity>
           <TouchableOpacity
             disabled={!reason.trim()}
             onPress={() => { onReject(reason); onClose(); }}
-            style={{ flex: 2, opacity: reason.trim() ? 1 : 0.5, borderRadius: BorderRadius.lg, overflow: 'hidden' }}
+            style={{ flex: 2, opacity: reason.trim() ? 1 : 0.4, borderRadius: 12, overflow: 'hidden' }}
           >
-            <View style={{ backgroundColor: RED, paddingVertical: 13, alignItems: 'center', borderRadius: BorderRadius.lg }}>
+            <View style={{ backgroundColor: P.red, paddingVertical: 14,
+              alignItems: 'center', borderRadius: 12 }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Reject Request</Text>
             </View>
           </TouchableOpacity>
         </View>
+
       </View>
     </Modal>
   );
@@ -265,17 +205,15 @@ function RejectModal({
 
 export function AdminScreen() {
   const { approveManager, rejectManager } = useAuth();
-  const [tab, setTab] = useState<AdminTab>('pending');
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [tab, setTab]       = useState<AdminTab>('pending');
+  const [users, setUsers]   = useState<any[]>([]);
+  const [loading, setLoading]       = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [rejectingManager, setRejectingManager] = useState<any>(null);
 
-  // ✅ FIX 1 : "managers" n'a plus status: 'approved'
-  //    → managers réactivés (status='active') sont maintenant visibles
   const filterMap: Record<AdminTab, { status?: string; role?: string }> = {
     pending:   { status: 'pending' },
-    managers:  { role: 'manager' },          // ← FIX : sans filtre status
+    managers:  { role: 'manager' },   // all managers — on filtre côté client
     agents:    { role: 'agent' },
     suspended: { status: 'suspended' },
     all:       {},
@@ -288,14 +226,27 @@ export function AdminScreen() {
       setUsers(res.ok ? (res.data || []) : []);
     } else {
       const res = await AdminService.getAllUsers(filterMap[currentTab]);
-      setUsers(res.ok ? (res.data?.users || []) : []);
+      let allUsers: any[] = res.ok ? (res.data?.users || []) : [];
+
+      // Onglet Managers : exclure pending et suspended (afficher approved + active)
+      if (currentTab === 'managers') {
+        allUsers = allUsers.filter(
+          u => u.status !== 'pending' && u.status !== 'suspended' && u.status !== 'rejected'
+        );
+      }
+
+      setUsers(allUsers);
     }
     setLoading(false);
   }, []);
 
   useEffect(() => { loadUsers(tab); }, [tab]);
 
-  const onRefresh = async () => { setRefreshing(true); await loadUsers(tab); setRefreshing(false); };
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadUsers(tab);
+    setRefreshing(false);
+  };
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
@@ -303,12 +254,15 @@ export function AdminScreen() {
     Alert.alert('Approve Manager', `Approve ${manager.first_name} ${manager.last_name}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Approve', onPress: async () => {
+        text: 'Approve',
+        onPress: async () => {
           const r = await approveManager(manager.id);
           if (r.success) {
             Alert.alert('✓ Approved', r.message);
-            setUsers(p => p.filter(m => m.id !== manager.id));
-          } else Alert.alert('Error', r.message);
+            setUsers(prev => prev.filter(m => m.id !== manager.id));
+          } else {
+            Alert.alert('Error', r.message);
+          }
         },
       },
     ]);
@@ -318,114 +272,229 @@ export function AdminScreen() {
     const r = await rejectManager(managerId, reason);
     if (r.success) {
       Alert.alert('Rejected', r.message);
-      setUsers(p => p.filter(m => m.id !== managerId));
-    } else Alert.alert('Error', r.message);
+      setUsers(prev => prev.filter(m => m.id !== managerId));
+    } else {
+      Alert.alert('Error', r.message);
+    }
   };
 
   const handleSuspend = (u: any) => {
-    Alert.alert('Suspend Account', `Suspend ${u.first_name} ${u.last_name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Suspend', style: 'destructive', onPress: async () => {
-          const res = await AdminService.updateUserStatus(u.id, 'suspended');
-          if (res.ok) { Alert.alert('✓ Suspended', res.data?.message); await loadUsers(tab); }
-          else Alert.alert('Error', res.error || 'Failed');
+    Alert.alert(
+      'Suspend Manager',
+      `Suspend ${u.first_name} ${u.last_name}?\nThey will lose access to the platform.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Suspend', style: 'destructive',
+          onPress: async () => {
+            const res = await AdminService.updateUserStatus(u.id, 'suspended');
+            if (res.ok) {
+              // Remove immediately from managers list, they move to suspended
+              setUsers(prev => prev.filter(m => m.id !== u.id));
+              Alert.alert('✓ Suspended', res.data?.message || `${u.first_name} has been suspended.`);
+            } else Alert.alert('Error', res.error || 'Failed');
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const handleReactivate = (u: any) => {
-    Alert.alert('Reactivate Account', `Reactivate ${u.first_name} ${u.last_name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Reactivate', onPress: async () => {
-          const res = await AdminService.updateUserStatus(u.id, 'active');
-          if (res.ok) { Alert.alert('✓ Reactivated', res.data?.message); await loadUsers(tab); }
-          else Alert.alert('Error', res.error || 'Failed');
+    Alert.alert(
+      'Reactivate Manager',
+      `Reactivate ${u.first_name} ${u.last_name}?\nThey will regain access to the platform.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reactivate',
+          onPress: async () => {
+            const res = await AdminService.updateUserStatus(u.id, 'active');
+            if (res.ok) {
+              // Remove immediately from suspended list, they move back to managers
+              setUsers(prev => prev.filter(m => m.id !== u.id));
+              Alert.alert('✓ Reactivated', res.data?.message || `${u.first_name} has been reactivated.`);
+            } else Alert.alert('Error', res.error || 'Failed');
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
-  // ── Rendu d'un utilisateur ────────────────────────────────────────────────
+  // ── Rendu d'une carte ─────────────────────────────────────────────────────
 
   const renderUser = (u: any) => {
     const name = u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || '—';
-    const avatarColor = u.role === 'manager' ? '#2563eb' : u.role === 'agent' ? VIOLET : Colors.gray400;
+    const avatarColor = u.role === 'manager' ? P.sky : u.role === 'agent' ? P.violet : P.slate400;
+    const isManager = u.role === 'manager';
+
+    // Quelles actions l'admin peut faire ?
+    const isPending   = tab === 'pending';
+    const isSuspended = tab === 'suspended' || (tab === 'all' && u.status === 'suspended');
+    const canSuspend  = isManager
+      && u.status !== 'suspended'
+      && u.status !== 'pending'
+      && (tab === 'managers' || tab === 'all');
+
+    const hasActions = isPending || isSuspended || canSuspend;
+
+    // Infos société — le serializer retourne un objet "company" imbriqué
+    // (ForeignKey Company sur le modèle Django)
+    // On supporte aussi les champs à plat pour la rétro-compatibilité
+    const co          = u.company || {};
+    const companyName = co.name       || u.company_name || null;
+    const industry    = co.industry   || u.industry     || null;
+    const country     = co.country    || u.country      || null;
+    const city        = co.city       || u.city         || null;
+    const currentErp  = co.current_erp || u.current_erp || null;
+    const phone       = u.phone_number || u.phone       || null;
+
+    // Section société toujours visible pour les managers
+    const showCompany = isManager || isPending;
 
     return (
-      <View key={u.id} style={[ad.userCard, Shadow.sm]}>
-        <UserAvatar name={name} color={avatarColor} />
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 2 }}>
-            <Text style={ad.userName}>{name}</Text>
-            <RoleBadge role={u.role || 'user'} />
-            <StatusBadge status={u.status || 'active'} />
+      <View key={u.id} style={S.card}>
+
+        {/* ── Ligne principale ──────────────────────────────────────────── */}
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+          <Avatar name={name} color={avatarColor} />
+
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={S.userName} numberOfLines={1}>{name}</Text>
+            <Text style={S.userEmail} numberOfLines={1}>{u.email}</Text>
+            <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+              <RolePill role={u.role || 'user'} />
+              <StatusPill status={u.status || 'active'} />
+            </View>
           </View>
-          <Text style={{ fontSize: 12, color: Colors.gray500 }}>{u.email}</Text>
-          <View style={{ flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-            {u.company_name && (
-              <View style={ad.infoTag}>
-                <Ionicons name="business-outline" size={10} color={Colors.gray500} />
-                <Text style={ad.infoTagTxt}>{u.company_name}</Text>
-              </View>
-            )}
-            {u.created_at && (
-              <View style={ad.infoTag}>
-                <Ionicons name="calendar-outline" size={10} color={Colors.gray500} />
-                <Text style={ad.infoTagTxt}>{new Date(u.created_at).toLocaleDateString()}</Text>
-              </View>
-            )}
-          </View>
+
+          {/* Date */}
+          {u.created_at && (
+            <View style={{ alignItems: 'flex-end', flexShrink: 0 }}>
+              <Text style={{ fontSize: 10, color: P.slate400 }}>Joined</Text>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: P.slate500 }}>
+                {new Date(u.created_at).toLocaleDateString('en-GB', {
+                  day: '2-digit', month: 'short', year: 'numeric',
+                })}
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* Actions selon le tab */}
-        <View style={{ gap: 6, alignItems: 'flex-end' }}>
-          {tab === 'pending' && (
-            <>
-              <TouchableOpacity style={ad.approveBtn} onPress={() => handleApprove(u)}>
-                <Ionicons name="checkmark" size={13} color="#fff" />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>Approve</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={ad.rejectBtn} onPress={() => setRejectingManager(u)}>
-                <Ionicons name="close" size={13} color={RED} />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: RED }}>Reject</Text>
-              </TouchableOpacity>
-            </>
-          )}
-          {(tab === 'managers' || (tab === 'all' && u.status !== 'suspended' && u.status !== 'pending')) && (
-            <TouchableOpacity style={ad.suspendBtn} onPress={() => handleSuspend(u)}>
-              <Ionicons name="ban-outline" size={13} color={RED} />
-              <Text style={{ fontSize: 11, fontWeight: '700', color: RED }}>Suspend</Text>
-            </TouchableOpacity>
-          )}
-          {(tab === 'suspended' || (tab === 'all' && u.status === 'suspended')) && (
-            <TouchableOpacity style={ad.reactivateBtn} onPress={() => handleReactivate(u)}>
-              <Ionicons name="person-add-outline" size={13} color={GREEN} />
-              <Text style={{ fontSize: 11, fontWeight: '700', color: GREEN }}>Reactivate</Text>
-            </TouchableOpacity>
-          )}
+        {/* ── Infos société — toujours affichées pour les managers ──────── */}
+        {showCompany && (
+          <View style={S.companySection}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+              <Ionicons name="business-outline" size={12} color={P.indigo} />
+              <Text style={S.companySectionTitle}>Company Information</Text>
+            </View>
 
-        </View>
+            {/* Grille 2 colonnes pour les champs société */}
+            <View style={S.companyGrid}>
+
+              {/* Nom société */}
+              <View style={S.companyField}>
+                <Text style={S.companyFieldLabel}>Company</Text>
+                <Text style={S.companyFieldValue} numberOfLines={1}>
+                  {companyName || <Text style={S.companyFieldEmpty}>—</Text>}
+                </Text>
+              </View>
+
+              {/* Secteur d'activité */}
+              <View style={S.companyField}>
+                <Text style={S.companyFieldLabel}>Industry</Text>
+                <Text style={S.companyFieldValue} numberOfLines={1}>
+                  {industry || <Text style={S.companyFieldEmpty}>—</Text>}
+                </Text>
+              </View>
+
+              {/* Pays */}
+              <View style={S.companyField}>
+                <Text style={S.companyFieldLabel}>Country</Text>
+                <Text style={S.companyFieldValue} numberOfLines={1}>
+                  {country || <Text style={S.companyFieldEmpty}>—</Text>}
+                </Text>
+              </View>
+
+              {/* Ville */}
+              <View style={S.companyField}>
+                <Text style={S.companyFieldLabel}>City</Text>
+                <Text style={S.companyFieldValue} numberOfLines={1}>
+                  {city || <Text style={S.companyFieldEmpty}>—</Text>}
+                </Text>
+              </View>
+
+              {/* ERP */}
+              <View style={S.companyField}>
+                <Text style={S.companyFieldLabel}>Current ERP</Text>
+                <Text style={S.companyFieldValue} numberOfLines={1}>
+                  {currentErp || <Text style={S.companyFieldEmpty}>Not specified</Text>}
+                </Text>
+              </View>
+
+              {/* Téléphone */}
+              {phone && (
+                <View style={S.companyField}>
+                  <Text style={S.companyFieldLabel}>Phone</Text>
+                  <Text style={S.companyFieldValue} numberOfLines={1}>{phone}</Text>
+                </View>
+              )}
+
+            </View>
+          </View>
+        )}
+
+        {/* ── Actions manager ───────────────────────────────────────────── */}
+        {hasActions && (
+          <View style={S.actionsRow}>
+            {isPending && (
+              <>
+                <ActionBtn label="Approve" icon="checkmark-circle-outline" variant="approve"
+                  onPress={() => handleApprove(u)} />
+                <ActionBtn label="Reject" icon="close-circle-outline" variant="reject"
+                  onPress={() => setRejectingManager(u)} />
+              </>
+            )}
+            {canSuspend && (
+              <ActionBtn label="Suspend Manager" icon="ban-outline" variant="suspend"
+                onPress={() => handleSuspend(u)} />
+            )}
+            {isSuspended && isManager && (
+              <ActionBtn label="Reactivate" icon="refresh-circle-outline" variant="reactivate"
+                onPress={() => handleReactivate(u)} />
+            )}
+          </View>
+        )}
+
+        {/* ── Agents : mention lecture seule ───────────────────────────── */}
+        {!hasActions && u.role === 'agent' && (
+          <View style={S.readOnlyBanner}>
+            <Ionicons name="information-circle-outline" size={13} color={P.slate400} />
+            <Text style={S.readOnlyTxt}>
+              Permissions managed by their manager · read only
+            </Text>
+          </View>
+        )}
+
       </View>
     );
   };
 
   // ── Tab config ────────────────────────────────────────────────────────────
 
-  const tabs: { id: AdminTab; label: string }[] = [
-    { id: 'pending',   label: 'Pending' },
-    { id: 'managers',  label: 'Managers' },
-    { id: 'agents',    label: 'Agents' },
-    { id: 'suspended', label: 'Suspended' },
-    { id: 'all',       label: 'All' },
+  const tabs: { id: AdminTab; label: string; icon: string }[] = [
+    { id: 'pending',   label: 'Pending',   icon: 'time-outline'      },
+    { id: 'managers',  label: 'Managers',  icon: 'briefcase-outline' },
+    { id: 'agents',    label: 'Agents',    icon: 'people-outline'    },
+    { id: 'suspended', label: 'Suspended', icon: 'ban-outline'       },
+    { id: 'all',       label: 'All',       icon: 'grid-outline'      },
   ];
 
-  return (
-    <View style={{ flex: 1, backgroundColor: Colors.gray50 }}>
+  const pendingCount = tab === 'pending' ? users.length : 0;
 
-      {/* Modals */}
+  return (
+    <View style={{ flex: 1, backgroundColor: P.slate50 }}>
+
+      {/* Modal rejet */}
       {rejectingManager && (
         <RejectModal
           manager={rejectingManager}
@@ -434,55 +503,68 @@ export function AdminScreen() {
         />
       )}
 
-      {/* Header */}
-      <View style={ad.pageHeader}>
-        <Text style={ad.pageTitle}>User Management</Text>
-        <Text style={ad.pageSub}>Validate requests and manage accounts</Text>
-      </View>
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <LinearGradient colors={[P.indigoDark, P.indigo]} style={S.header}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <View>
+          <Text style={S.headerLabel}>WEEG PLATFORM</Text>
+          <Text style={S.headerTitle}>User Management</Text>
+          <Text style={S.headerSub}>Review requests · manage manager accounts</Text>
+        </View>
+        <Ionicons name="shield-checkmark" size={32} color="rgba(255,255,255,0.18)" />
+      </LinearGradient>
 
-      {/* ✅ FIX 2 : wrapper View fixe pour que la tab bar ne disparaisse pas au scroll */}
-      <View style={ad.tabBarWrap}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ flex: 1 }}
-          contentContainerStyle={ad.tabBarContent}
-        >
-          {tabs.map(t => (
-            <TouchableOpacity
-              key={t.id}
-              style={[ad.tabBtn, tab === t.id && ad.tabBtnActive]}
-              onPress={() => setTab(t.id)}
-            >
-              <Text style={[ad.tabLabel, tab === t.id && { color: INDIGO, fontWeight: '700' }]}>
-                {t.label}
-              </Text>
-              {t.id === 'pending' && users.length > 0 && tab === 'pending' && (
-                <View style={ad.tabBadge}>
-                  <Text style={{ fontSize: 9, color: '#fff', fontWeight: '800' }}>{users.length}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
+      {/* ── Tab bar ────────────────────────────────────────────────────── */}
+      <View style={S.tabBarWrap}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={S.tabBarContent}>
+          {tabs.map(t => {
+            const active = tab === t.id;
+            return (
+              <TouchableOpacity key={t.id}
+                style={[S.tabBtn, active && S.tabBtnActive]}
+                onPress={() => setTab(t.id)}>
+                <Ionicons name={t.icon as any} size={14}
+                  color={active ? P.indigo : P.slate400} />
+                <Text style={[S.tabLabel, active && S.tabLabelActive]}>{t.label}</Text>
+                {t.id === 'pending' && pendingCount > 0 && (
+                  <View style={S.tabBadge}>
+                    <Text style={{ fontSize: 9, color: '#fff', fontWeight: '800' }}>
+                      {pendingCount}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
-      {/* Contenu */}
+      {/* ── Liste ──────────────────────────────────────────────────────── */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={INDIGO} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={P.indigo} />
+        }
       >
-        <View style={{ padding: Spacing.base }}>
+        <View style={{ padding: 16, paddingBottom: 40 }}>
           {loading ? (
-            <ActivityIndicator color={INDIGO} style={{ marginTop: 60 }} />
-          ) : users.length === 0 ? (
-            <View style={[ad.emptyBox, Shadow.sm]}>
-              <Ionicons name="filter-outline" size={40} color={Colors.gray300} />
-              <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.foreground, marginTop: 12 }}>
-                No users found
+            <View style={{ alignItems: 'center', paddingTop: 80 }}>
+              <ActivityIndicator color={P.indigo} size="large" />
+              <Text style={{ marginTop: 12, fontSize: 13, color: P.slate400 }}>
+                Loading users…
               </Text>
-              <Text style={{ fontSize: 12, color: Colors.gray500, marginTop: 4 }}>
-                {tab === 'pending' ? 'No pending requests' : `No ${tab} accounts`}
+            </View>
+          ) : users.length === 0 ? (
+            <View style={S.emptyBox}>
+              <View style={S.emptyIconWrap}>
+                <Ionicons name="people-outline" size={36} color={P.slate400} />
+              </View>
+              <Text style={S.emptyTitle}>No users found</Text>
+              <Text style={S.emptySub}>
+                {tab === 'pending'
+                  ? 'No pending requests at the moment'
+                  : `No ${tab} accounts to display`}
               </Text>
             </View>
           ) : (
@@ -496,147 +578,119 @@ export function AdminScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const ad = StyleSheet.create({
-  pageHeader: {
-    padding: Spacing.base,
-    paddingBottom: 12,
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.gray100,
+const S = StyleSheet.create({
+  header: {
+    padding: 20, paddingTop: 52, paddingBottom: 20,
+    flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
   },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: Colors.foreground },
-  pageSub: { fontSize: 13, color: Colors.gray500, marginTop: 2 },
+  headerLabel: {
+    fontSize: 10, fontWeight: '800',
+    color: 'rgba(255,255,255,0.5)', letterSpacing: 2, marginBottom: 4,
+  },
+  headerTitle: { fontSize: 26, fontWeight: '900', color: P.white, letterSpacing: -0.5 },
+  headerSub:   { fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 2 },
 
-  // ✅ FIX 2 : height fixe + zIndex pour rester visible pendant le scroll
   tabBarWrap: {
-    height: 48,
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.gray100,
-    zIndex: 10,
+    height: 52, backgroundColor: P.white,
+    borderBottomWidth: 1, borderBottomColor: P.slate200, zIndex: 10,
   },
-  tabBarContent: { paddingHorizontal: 8 },
+  tabBarContent:  { paddingHorizontal: 12, alignItems: 'center' },
   tabBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 14, height: 52,
+    borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
-  tabBtnActive: { borderBottomColor: INDIGO },
-  tabLabel: { fontSize: 13, fontWeight: '500', color: Colors.gray500 },
+  tabBtnActive:   { borderBottomColor: P.indigo },
+  tabLabel:       { fontSize: 13, fontWeight: '500', color: P.slate400 },
+  tabLabelActive: { color: P.indigo, fontWeight: '700' },
   tabBadge: {
-    backgroundColor: RED,
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-
-  userCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: Colors.gray100,
-  },
-  emptyBox: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
-    padding: 40,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.gray100,
-  },
-
-  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  avatarTxt: { fontSize: 16, fontWeight: '800', color: Colors.white },
-  userName: { fontSize: 14, fontWeight: '700', color: Colors.foreground },
-
-  infoTag: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: Colors.gray100,
-    paddingHorizontal: 6, paddingVertical: 2,
-    borderRadius: BorderRadius.full,
-  },
-  infoTagTxt: { fontSize: 10, color: Colors.gray600 },
-
-  approveBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: GREEN,
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: BorderRadius.lg,
-  },
-  rejectBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#fee2e2',
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1, borderColor: '#fecaca',
-  },
-  suspendBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#fff1f2',
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1, borderColor: '#fecaca',
-  },
-  reactivateBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1, borderColor: '#bbf7d0',
-  },
-  permRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 12,
-    backgroundColor: Colors.gray50,
-    borderRadius: BorderRadius.lg,
-    marginBottom: 6,
-  },
-  checkbox: {
-    width: 18, height: 18, borderRadius: 4,
-    borderWidth: 2, borderColor: Colors.gray300,
+    backgroundColor: P.red, borderRadius: 8,
+    minWidth: 16, height: 16, paddingHorizontal: 4,
     alignItems: 'center', justifyContent: 'center',
   },
-  checkboxOn: { backgroundColor: INDIGO, borderColor: INDIGO },
 
-  modalHeader: {
-    flexDirection: 'row', alignItems: 'center',
-    padding: 20, paddingTop: 24,
-    borderBottomWidth: 1, borderBottomColor: Colors.gray100,
+  card: {
+    backgroundColor: P.white, borderRadius: 16, marginBottom: 12,
+    padding: 16, borderWidth: 1, borderColor: P.slate200,
+    shadowColor: P.slate900, shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
   },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.foreground },
-  quickBtn: {
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.white,
-    borderWidth: 1, borderColor: Colors.gray200,
+
+  avatar:    { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  avatarTxt: { fontSize: 16, fontWeight: '900', color: P.white, letterSpacing: 0.5 },
+
+  userName:  { fontSize: 15, fontWeight: '800', color: P.slate900, letterSpacing: -0.2 },
+  userEmail: { fontSize: 12, color: P.slate400, marginTop: 2 },
+
+  companySection: {
+    marginTop: 14, backgroundColor: P.slate50,
+    borderRadius: 12, padding: 12,
+    borderWidth: 1, borderColor: P.slate200,
   },
-  quickTxt: { fontSize: 12, fontWeight: '600', color: Colors.foreground },
-  modalFooter: {
-    flexDirection: 'row', gap: 12,
-    padding: 16,
-    borderTopWidth: 1, borderTopColor: Colors.gray100,
+  companySectionTitle: {
+    fontSize: 11, fontWeight: '700', color: P.indigo,
+    textTransform: 'uppercase', letterSpacing: 0.8,
   },
+  companyGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    gap: 0, marginTop: 4,
+  },
+  companyField: {
+    width: '50%', paddingVertical: 6, paddingRight: 8,
+  },
+  companyFieldLabel: {
+    fontSize: 10, fontWeight: '700', color: P.slate400,
+    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2,
+  },
+  companyFieldValue: {
+    fontSize: 13, fontWeight: '600', color: P.slate700,
+  },
+  companyFieldEmpty: {
+    fontSize: 13, fontWeight: '400', color: P.slate300,
+    fontStyle: 'italic',
+  },
+
+  tag:    {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: P.white, paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 8, borderWidth: 1, borderColor: P.slate200,
+  },
+  tagTxt: { fontSize: 11, color: P.slate600, fontWeight: '500', maxWidth: 140 },
+
+  actionsRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+    marginTop: 14, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: P.slate100,
+  },
+  actionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 9, borderWidth: 1,
+  },
+
+  readOnlyBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 12, paddingTop: 10,
+    borderTopWidth: 1, borderTopColor: P.slate100,
+  },
+  readOnlyTxt: { fontSize: 11, color: P.slate400, fontStyle: 'italic' },
+
+  emptyBox:      { backgroundColor: P.white, borderRadius: 20, padding: 48,
+                   alignItems: 'center', borderWidth: 1, borderColor: P.slate200, marginTop: 8 },
+  emptyIconWrap: { width: 72, height: 72, borderRadius: 20, backgroundColor: P.slate100,
+                   alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyTitle:    { fontSize: 16, fontWeight: '800', color: P.slate700, marginBottom: 6 },
+  emptySub:      { fontSize: 13, color: P.slate400, textAlign: 'center', lineHeight: 20 },
+
+  quickReason:       { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 9,
+                       borderWidth: 1.5, borderColor: P.slate200, backgroundColor: P.slate50 },
+  quickReasonActive: { borderColor: P.indigo, backgroundColor: P.indigoLight },
+  rejectInput:       { borderWidth: 1.5, borderColor: P.slate200, borderRadius: 12,
+                       padding: 14, fontSize: 14, color: P.slate700,
+                       backgroundColor: P.slate50, minHeight: 110, textAlignVertical: 'top' },
+
   cancelBtn: {
-    flex: 1, paddingVertical: 13,
-    borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.gray100,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  saveBtn: {
-    flex: 1, paddingVertical: 13,
-    borderRadius: BorderRadius.lg,
-    alignItems: 'center', justifyContent: 'center',
+    flex: 1, paddingVertical: 13, borderRadius: 12,
+    backgroundColor: P.slate100, alignItems: 'center', justifyContent: 'center',
   },
 });
