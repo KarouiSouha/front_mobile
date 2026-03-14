@@ -14,7 +14,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 import { DashboardScreen }      from '../screens/dashboard/DashboardScreen';
-import { AlertsScreen }         from '../screens/alerts/AlertsScreen';
 import { ControlScreen }        from '../screens/control/ControlScreen';
 import { AdminScreen }          from '../screens/admin/AdminScreen';
 import { ManagerAgentsScreen }  from '../screens/manager/ManagerAgentsScreen';
@@ -157,7 +156,6 @@ function withHeader(Screen: React.ComponentType<any>) {
 
 // Wrappers
 const HomeWrapped          = withHeader(DashboardScreen);
-const AlertsWrapped        = withHeader(AlertsScreen);
 const ControlWrapped       = withHeader(ControlScreen);
 const AdminWrapped         = withHeader(AdminScreen);
 const ManagerAgentsWrapped = withHeader(ManagerAgentsScreen);
@@ -241,7 +239,6 @@ function ManagerNavigator() {
   return (
     <Tab.Navigator screenOptions={navigatorScreenOptions}>
       <Tab.Screen name="Home"     component={HomeWrapped}          options={tabOptions.Home} />
-      <Tab.Screen name="Alerts"   component={AlertsWrapped}        options={tabOptions.Alerts(pendingAlertsCount)} />
       <Tab.Screen name="Control"  component={ControlWrapped}       options={tabOptions.Control} />
       {/* ← Nouveau tab Team : gestion des agents du manager */}
       <Tab.Screen name="Team"     component={ManagerAgentsWrapped} options={tabOptions.Team} />
@@ -256,7 +253,6 @@ function AgentNavigator() {
   return (
     <Tab.Navigator screenOptions={navigatorScreenOptions}>
       <Tab.Screen name="Home"     component={HomeWrapped}     options={tabOptions.Home} />
-      <Tab.Screen name="Alerts"   component={AlertsWrapped}   options={tabOptions.Alerts(pendingAlertsCount)} />
       <Tab.Screen name="Control"  component={ControlWrapped}  options={tabOptions.Control} />
       <Tab.Screen name="Profile"  component={ProfileWrapped}  options={tabOptions.Profile} />
       <Tab.Screen name="Settings" component={SettingsWrapped} options={tabOptions.Settings} />
