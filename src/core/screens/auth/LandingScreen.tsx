@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadow } from '../../constants/theme';
+import { VideoView, useVideoPlayer } from 'expo-video';
 
 const { width } = Dimensions.get('window');
 
@@ -60,6 +61,11 @@ const faqs = [
 export function LandingScreen({ navigation }: any) {
   const [activeRole, setActiveRole] = useState<'agent' | 'manager' | 'admin'>('manager');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // ── expo-video player ──
+  const player = useVideoPlayer(require('../../assets/weeg_demo.mp4'), p => {
+    p.loop = false;
+  });
 
   const roleContent = {
     agent: {
@@ -117,7 +123,6 @@ export function LandingScreen({ navigation }: any) {
 
       {/* Sticky Nav */}
       <View style={styles.nav}>
-        {/* Logo: flex:1 + shrinks, image fills 100% of available space */}
         <View style={styles.navLogoWrapper}>
           <Image
             source={require('../../assets/logo.jpeg')}
@@ -125,8 +130,6 @@ export function LandingScreen({ navigation }: any) {
             resizeMode="contain"
           />
         </View>
-
-        {/* Buttons: never shrink, always their natural size */}
         <View style={styles.navButtons}>
           <TouchableOpacity
             style={styles.navGhost}
@@ -151,7 +154,6 @@ export function LandingScreen({ navigation }: any) {
 
         {/* 1. HERO */}
         <LinearGradient colors={['#eff6ff', '#ffffff', '#fff7ed']} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          {/* AI Badge */}
           <View style={styles.heroBadge}>
             <View style={styles.heroBadgeInner}>
               <Ionicons name="sparkles-outline" size={14} color={WEEG_BLUE} />
@@ -175,7 +177,6 @@ export function LandingScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
 
-          {/* Hero Logo */}
           <View style={styles.heroLogoContainer}>
             <Image
               source={require('../../assets/logo.jpeg')}
@@ -223,9 +224,10 @@ export function LandingScreen({ navigation }: any) {
             iconBg={[Colors.blue500, WEEG_BLUE]}
             features={analyticsFeatures}
           />
+          {/* ✅ Fixed: was "brain-outline" which is not a valid Ionicons name */}
           <FeatureSection
             title="Artificial Intelligence"
-            icon="brain-outline"
+            icon="hardware-chip-outline"
             iconBg={[Colors.purple600, Colors.pink500]}
             features={aiFeatures}
           />
@@ -267,6 +269,33 @@ export function LandingScreen({ navigation }: any) {
                 <Text style={styles.roleBenefitText}>{b.text}</Text>
               </View>
             ))}
+
+            {/* ── VIDEO SECTION ── */}
+            <View style={styles.roleVideoWrapper}>
+              {/* Badge */}
+              <View style={styles.roleVideoBadge}>
+                <Ionicons name="information-circle-outline" size={13} color={WEEG_BLUE} />
+                <Text style={styles.roleVideoBadgeText}>Why WEEG?</Text>
+              </View>
+
+              {/* Title + subtitle */}
+              <Text style={styles.roleVideoTitle}>Not Just Another ERP</Text>
+              <Text style={styles.roleVideoDesc}>
+                Watch how WEEG combines analytics, AI, and smart alerts to turn your operational data into concrete decisions in real-time.
+              </Text>
+
+              {/* ✅ expo-video VideoView replacing deprecated expo-av Video */}
+              <View style={styles.roleVideoThumb}>
+                <VideoView
+                  player={player}
+                  style={styles.roleVideoPlayer}
+                  contentFit="contain"
+                  nativeControls
+                />
+              </View>
+            </View>
+            {/* ── END VIDEO SECTION ── */}
+
           </LinearGradient>
         </View>
 
@@ -343,19 +372,16 @@ const styles = StyleSheet.create({
     zIndex: 100,
     minHeight: 58,
   },
-  // Logo wrapper takes all remaining space and never pushes buttons
   navLogoWrapper: {
     flex: 1,
-    minWidth: 0,          // allows the wrapper to shrink below its content size
+    minWidth: 0,
     marginRight: 10,
     height: 36,
   },
-  // Image fills 100% of the wrapper width — shrinks automatically
   navLogoImg: {
     width: '100%',
     height: '100%',
   },
-  // Buttons side: never shrinks, never wraps
   navButtons: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -422,6 +448,57 @@ const styles = StyleSheet.create({
   roleSubtitle: { fontSize: 14, color: Colors.gray500, marginBottom: 16 },
   roleBenefit: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: Colors.white, borderRadius: BorderRadius.xl, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: Colors.gray100 },
   roleBenefitText: { fontSize: 14, fontWeight: '500', color: Colors.foreground },
+
+  // Role Video Section
+  roleVideoWrapper: {
+    marginTop: 20,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius['2xl'],
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  roleVideoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    marginBottom: 12,
+  },
+  roleVideoBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: WEEG_BLUE,
+  },
+  roleVideoTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: Colors.foreground,
+    marginBottom: 8,
+    lineHeight: 28,
+  },
+  roleVideoDesc: {
+    fontSize: 13,
+    color: Colors.gray500,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  roleVideoThumb: {
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  roleVideoPlayer: {
+    width: '100%',
+    height: 210,
+  },
 
   // How it works
   howSection: { padding: Spacing.base, paddingVertical: 40 },

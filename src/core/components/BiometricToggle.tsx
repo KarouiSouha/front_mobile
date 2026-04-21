@@ -1,14 +1,15 @@
 /**
  * src/core/components/BiometricToggle.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * Displayed in ProfileScreen → Security tab.
+ * ProfileScreen → Security tab.
  *
- * When biometric login is ACTIVE, shows:
- *   - The toggle row
- *   - A fingerprint scan visual with animated pulse + slot indicators
- *   - "Fingerprint login is active" status pill
- *
- * When biometric login is OFF, shows the toggle row only.
+ * Slot logic (since expo-local-authentication has no enrolled-count API):
+ *   - We manage a per-user slot registry in AsyncStorage (max MAX_FINGERPRINTS).
+ *   - Each slot can be EMPTY or REGISTERED.
+ *   - Tapping an EMPTY slot  → triggers biometric scan → registers it.
+ *   - Tapping a FILLED slot  → confirm dialog → removes it (if >1 slot filled,
+ *     otherwise must use the main toggle to fully disable biometrics).
+ *   - The main scan button (large circle) → test scan (verify the active finger).
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -20,19 +21,51 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, BorderRadius, Shadow } from '../constants/theme';
 import { BiometricService, BiometricCapability, MAX_FINGERPRINTS } from '../lib/biometricService';
 
 const WEEG_BLUE   = '#1a6fe8';
 const WEEG_ORANGE = '#e87c1a';
 
+// ─── Slot Storage ─────────────────────────────────────────────────────────────
+
+function emailKey(email: string) {
+  return email.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+}
+
+function slotKey(email: string) {
+  return `weeg_bio_slots_${emailKey(email)}`;
+}
+
+/** Returns an array of length MAX_FINGERPRINTS: true = filled, false = empty */
+async function loadSlots(email: string): Promise<boolean[]> {
+  try {
+    const raw = await AsyncStorage.getItem(slotKey(email));
+    if (raw) {
+      const arr: boolean[] = JSON.parse(raw);
+      // Ensure correct length
+      while (arr.length < MAX_FINGERPRINTS) arr.push(false);
+      return arr.slice(0, MAX_FINGERPRINTS);
+    }
+  } catch {}
+  return Array(MAX_FINGERPRINTS).fill(false);
+}
+
+async function saveSlots(email: string, slots: boolean[]): Promise<void> {
+  await AsyncStorage.setItem(slotKey(email), JSON.stringify(slots));
+}
+
+async function clearSlots(email: string): Promise<void> {
+  await AsyncStorage.removeItem(slotKey(email));
+}
+
 // ─── Password Confirmation Modal ──────────────────────────────────────────────
 
 function PasswordConfirmModal({
-  visible, email, onConfirm, onCancel,
+  visible, onConfirm, onCancel,
 }: {
   visible: boolean;
-  email: string;
   onConfirm: (password: string) => void;
   onCancel: () => void;
 }) {
@@ -108,18 +141,28 @@ const pm = StyleSheet.create({
 // ─── Fingerprint Scan Visual ──────────────────────────────────────────────────
 
 function FingerprintScanVisual({
-  biometricType, usedSlots, maxSlots, onScanPress, scanning,
+  biometricType,
+  slots,
+  onSlotPress,
+  onScanPress,
+  scanning,
+  activeSlotIndex,
 }: {
   biometricType: string;
-  usedSlots: number;
-  maxSlots: number;
+  slots: boolean[];
+  onSlotPress: (index: number) => void;
   onScanPress: () => void;
   scanning: boolean;
+  activeSlotIndex: number | null; // which slot is currently being scanned
 }) {
   const pulseScale   = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(0.5)).current;
   const glowOpacity  = useRef(new Animated.Value(0.3)).current;
   const scanLine     = useRef(new Animated.Value(0)).current;
+  // Per-slot press scale animations
+  const slotScales = useRef(
+    Array.from({ length: MAX_FINGERPRINTS }, () => new Animated.Value(1))
+  ).current;
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -144,7 +187,6 @@ function FingerprintScanVisual({
       ]),
     );
     glow.start();
-
     return () => { pulse.stop(); glow.stop(); };
   }, []);
 
@@ -160,52 +202,94 @@ function FingerprintScanVisual({
     }
   }, [scanning]);
 
+  const handleSlotPressIn = (i: number) => {
+    Animated.spring(slotScales[i], { toValue: 0.88, useNativeDriver: true, speed: 30 }).start();
+  };
+  const handleSlotPressOut = (i: number) => {
+    Animated.spring(slotScales[i], { toValue: 1, useNativeDriver: true, friction: 4 }).start();
+  };
+
   const iconName = biometricType === 'Face ID' ? 'scan-outline'
-    : biometricType === 'Iris'   ? 'eye-outline'
+    : biometricType === 'Iris' ? 'eye-outline'
     : 'finger-print-outline';
 
+  const filledCount = slots.filter(Boolean).length;
   const sweepY = scanLine.interpolate({ inputRange: [0, 1], outputRange: [-44, 44] });
 
   return (
     <View style={fv.container}>
 
-      {/* ── Top row: label + slot indicators ── */}
+      {/* ── Slot row ── */}
       <View style={fv.topRow}>
         <Text style={fv.regLabel}>Registered fingerprints</Text>
+
         <View style={fv.slots}>
-          {Array.from({ length: maxSlots }).map((_, i) => (
-            <View key={i} style={[fv.slot, i < usedSlots ? fv.slotOn : fv.slotOff]}>
-              <Ionicons name="finger-print-outline" size={11} color={i < usedSlots ? '#fff' : Colors.text3} />
-            </View>
-          ))}
-          <Text style={fv.slotCount}>{usedSlots}/{maxSlots}</Text>
+          {slots.map((filled, i) => {
+            const isScanning = activeSlotIndex === i;
+
+            return (
+              <Animated.View key={i} style={{ transform: [{ scale: slotScales[i] }] }}>
+                <TouchableOpacity
+                  onPress={() => onSlotPress(i)}
+                  onPressIn={() => handleSlotPressIn(i)}
+                  onPressOut={() => handleSlotPressOut(i)}
+                  activeOpacity={1}
+                  style={[
+                    fv.slot,
+                    filled ? fv.slotOn : fv.slotOff,
+                    isScanning && fv.slotScanning,
+                  ]}
+                >
+                  {isScanning ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : filled ? (
+                    // Filled: gradient icon + small remove badge
+                    <View style={fv.slotInner}>
+                      <Ionicons name="finger-print-outline" size={16} color="#fff" />
+                      <View style={fv.removeBadge}>
+                        <Ionicons name="close" size={7} color="#fff" />
+                      </View>
+                    </View>
+                  ) : (
+                    // Empty: dashed outline + add icon
+                    <View style={fv.slotInner}>
+                      <Ionicons name="add" size={16} color={Colors.text3} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })}
+
+          <Text style={fv.slotCount}>{filledCount}/{MAX_FINGERPRINTS}</Text>
         </View>
       </View>
 
-      {/* ── Central fingerprint button ── */}
+      {/* ── Slot hints ── */}
+      <View style={fv.hintRow}>
+        <View style={fv.hintDot} />
+        <Text style={fv.hintSmall}>
+          {filledCount === 0
+            ? 'Tap a slot to register a fingerprint'
+            : filledCount < MAX_FINGERPRINTS
+            ? 'Tap the empty slot to add another fingerprint'
+            : 'Both fingerprint slots are registered'}
+        </Text>
+      </View>
+
+      {/* ── Central fingerprint scan button ── */}
       <TouchableOpacity onPress={onScanPress} activeOpacity={0.85} disabled={scanning} style={fv.btnWrap}>
-
-        {/* Outer pulse ring */}
         <Animated.View style={[fv.pulseRing, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]} />
-
-        {/* Second subtle ring */}
         <View style={fv.ring2} />
-
-        {/* Main gradient circle */}
         <LinearGradient colors={[WEEG_BLUE, WEEG_ORANGE]} style={fv.circle} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          {/* Glow shimmer */}
           <Animated.View style={[fv.glow, { opacity: glowOpacity }]} />
-
-          {/* Scan sweep */}
           {scanning && (
             <Animated.View style={[fv.sweep, { transform: [{ translateY: sweepY }] }]} />
           )}
-
           <Ionicons name={iconName as any} size={46} color="#fff" />
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* ── Labels ── */}
       <Text style={fv.tapLabel}>
         {scanning ? 'Scanning…' : `Tap to test ${biometricType}`}
       </Text>
@@ -233,35 +317,79 @@ const fv = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 22,
+    marginBottom: 6,
   },
   regLabel: { fontSize: 12, fontWeight: '600', color: Colors.text2 },
-  slots:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  slot:     { width: 26, height: 26, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  slotOn:   { backgroundColor: WEEG_BLUE },
-  slotOff:  { backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border2 },
-  slotCount:{ fontSize: 11, fontWeight: '700', color: Colors.text3, marginLeft: 2 },
+  slots:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
-  btnWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: 18, width: 120, height: 120 },
+  slot: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  slotOn: {
+    backgroundColor: WEEG_BLUE,
+    ...Shadow.sm,
+  },
+  slotOff: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: Colors.border2,
+    borderStyle: 'dashed',
+  },
+  slotScanning: {
+    backgroundColor: WEEG_ORANGE,
+  },
+  slotInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  removeBadge: {
+    position: 'absolute',
+    top: -10,
+    right: -14,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#ef4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.surface2,
+  },
+  slotCount: { fontSize: 12, fontWeight: '700', color: Colors.text3, marginLeft: 2 },
+
+  hintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    width: '100%',
+    marginBottom: 18,
+    paddingHorizontal: 2,
+  },
+  hintDot:   { width: 5, height: 5, borderRadius: 3, backgroundColor: WEEG_BLUE },
+  hintSmall: { fontSize: 11, color: Colors.text3, flex: 1, lineHeight: 15 },
+
+  btnWrap:   { alignItems: 'center', justifyContent: 'center', marginBottom: 18, width: 120, height: 120 },
   pulseRing: {
     position: 'absolute',
-    width: 116,
-    height: 116,
+    width: 116, height: 116,
     borderRadius: 58,
     borderWidth: 2,
     borderColor: WEEG_BLUE,
   },
   ring2: {
     position: 'absolute',
-    width: 102,
-    height: 102,
+    width: 102, height: 102,
     borderRadius: 51,
     borderWidth: 1,
     borderColor: 'rgba(26,111,232,0.2)',
   },
   circle: {
-    width: 90,
-    height: 90,
+    width: 90, height: 90,
     borderRadius: 45,
     alignItems: 'center',
     justifyContent: 'center',
@@ -272,26 +400,22 @@ const fv = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.18)',
   },
   sweep: {
-    position: 'absolute',
-    left: 0, right: 0,
+    position: 'absolute', left: 0, right: 0,
     height: 2,
     backgroundColor: 'rgba(255,255,255,0.75)',
     borderRadius: 1,
   },
-
   tapLabel:  { fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 4 },
   hintLabel: { fontSize: 11, color: Colors.text3, textAlign: 'center', lineHeight: 16, paddingHorizontal: 16 },
 });
 
-// ─── Standalone hardware prompt ───────────────────────────────────────────────
+// ─── Hardware prompt helper ───────────────────────────────────────────────────
 
 async function promptBiometricHardware(msg: string): Promise<{ success: boolean; errorCode?: string }> {
   try {
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage:         msg,
-      fallbackLabel:         'Use Password',
-      cancelLabel:           'Cancel',
-      disableDeviceFallback: false,
+      promptMessage: msg, fallbackLabel: 'Use Password',
+      cancelLabel: 'Cancel', disableDeviceFallback: false,
     });
     if (!result.success) {
       return { success: false, errorCode: (result as any).error === 'user_cancel' ? 'user_cancel' : 'biometric_mismatch' };
@@ -314,16 +438,36 @@ export function BiometricToggle({ email }: BiometricToggleProps) {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [toggling, setToggling]                   = useState(false);
   const [scanning, setScanning]                   = useState(false);
+  const [activeSlotIndex, setActiveSlotIndex]     = useState<number | null>(null);
+
+  // Slot state — managed locally in AsyncStorage
+  const [slots, setSlots] = useState<boolean[]>(Array(MAX_FINGERPRINTS).fill(false));
 
   const load = useCallback(async () => {
     const cap = await BiometricService.getCapability(email);
     setCapability(cap);
+
+    if (cap.isEnabled) {
+      const saved = await loadSlots(email);
+      // If no slots saved yet but biometrics are enabled, seed slot 0 as filled
+      const hasAny = saved.some(Boolean);
+      if (!hasAny) {
+        const seeded: boolean[] = [true, ...Array(MAX_FINGERPRINTS - 1).fill(false)];
+        await saveSlots(email, seeded);
+        setSlots(seeded);
+      } else {
+        setSlots(saved);
+      }
+    } else {
+      setSlots(Array(MAX_FINGERPRINTS).fill(false));
+    }
+
     setLoading(false);
   }, [email]);
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Toggle ────────────────────────────────────────────────────────────────
+  // ── Toggle (main switch) ──────────────────────────────────────────────────
 
   const handleToggle = async (newValue: boolean) => {
     if (!capability) return;
@@ -335,20 +479,16 @@ export function BiometricToggle({ email }: BiometricToggleProps) {
             : 'This device does not support biometric authentication.');
         return;
       }
-      if (capability.enrolledCount > MAX_FINGERPRINTS) {
-        Alert.alert('Too Many Fingerprints',
-          `WEEG allows a maximum of ${MAX_FINGERPRINTS} fingerprints per account.\n\nPlease remove fingerprints in device settings and try again.`);
-        return;
-      }
       setShowPasswordModal(true);
     } else {
       Alert.alert(`Disable ${capability.biometricType} Login`,
-        'You will need to use your email and password to sign in.',
+        'This will remove all registered fingerprints and you will need to use your email and password to sign in.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Disable', style: 'destructive', onPress: async () => {
               setToggling(true);
               await BiometricService.disable(email);
+              await clearSlots(email);
               await load();
               setToggling(false);
             },
@@ -358,13 +498,13 @@ export function BiometricToggle({ email }: BiometricToggleProps) {
     }
   };
 
-  // ── Enable flow ───────────────────────────────────────────────────────────
+  // ── Enable flow (first time, slot 0) ─────────────────────────────────────
 
   const handlePasswordConfirm = async (password: string) => {
     setShowPasswordModal(false);
     setToggling(true);
 
-    const authResult = await promptBiometricHardware('Scan your fingerprint to confirm');
+    const authResult = await promptBiometricHardware('Scan your fingerprint to register');
     if (!authResult.success) {
       setToggling(false);
       if (authResult.errorCode !== 'user_cancel') {
@@ -383,11 +523,81 @@ export function BiometricToggle({ email }: BiometricToggleProps) {
       return;
     }
 
+    // Register slot 0
+    const newSlots: boolean[] = [true, ...Array(MAX_FINGERPRINTS - 1).fill(false)];
+    await saveSlots(email, newSlots);
+    setSlots(newSlots);
+
     await load();
     setToggling(false);
   };
 
-  // ── Test scan (press icon when already active) ────────────────────────────
+  // ── Slot press handler ────────────────────────────────────────────────────
+
+  const handleSlotPress = async (index: number) => {
+    if (!capability?.isEnabled || activeSlotIndex !== null) return;
+
+    const isFilled = slots[index];
+
+    if (isFilled) {
+      // ── Remove this fingerprint slot ──────────────────────────────────────
+      const filledCount = slots.filter(Boolean).length;
+
+      if (filledCount <= 1) {
+        // Last slot — must use the main toggle to fully disable
+        Alert.alert(
+          'Cannot Remove Last Fingerprint',
+          'This is your only registered fingerprint. To fully disable biometric login, use the toggle above.',
+        );
+        return;
+      }
+
+      Alert.alert(
+        `Remove Fingerprint ${index + 1}`,
+        'Are you sure you want to remove this fingerprint?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: async () => {
+              const updated = [...slots];
+              updated[index] = false;
+              await saveSlots(email, updated);
+              setSlots(updated);
+            },
+          },
+        ],
+      );
+    } else {
+      // ── Register a new fingerprint in this slot ────────────────────────────
+      setActiveSlotIndex(index);
+      setScanning(true);
+
+      const authResult = await promptBiometricHardware(
+        `Register Fingerprint ${index + 1} — scan your finger now`,
+      );
+
+      setScanning(false);
+      setActiveSlotIndex(null);
+
+      if (!authResult.success) {
+        if (authResult.errorCode !== 'user_cancel') {
+          Alert.alert('Registration Failed', 'Fingerprint not recognised. Please try again.');
+        }
+        return;
+      }
+
+      const updated = [...slots];
+      updated[index] = true;
+      await saveSlots(email, updated);
+      setSlots(updated);
+
+      Alert.alert('✓ Fingerprint Registered', `Fingerprint ${index + 1} has been added successfully.`);
+    }
+  };
+
+  // ── Test scan (central button) ────────────────────────────────────────────
 
   const handleTestScan = async () => {
     if (!capability?.isEnabled || scanning) return;
@@ -425,14 +635,12 @@ export function BiometricToggle({ email }: BiometricToggleProps) {
     : capability.biometricType === 'Iris' ? 'eye-outline'
     : 'finger-print-outline';
 
-  const isOn      = capability.isEnabled;
-  const usedSlots = isOn ? Math.min(capability.enrolledCount, MAX_FINGERPRINTS) : 0;
+  const isOn = capability.isEnabled;
 
   return (
     <>
       <PasswordConfirmModal
         visible={showPasswordModal}
-        email={email}
         onConfirm={handlePasswordConfirm}
         onCancel={() => setShowPasswordModal(false)}
       />
@@ -479,25 +687,28 @@ export function BiometricToggle({ email }: BiometricToggleProps) {
         <>
           <FingerprintScanVisual
             biometricType={capability.biometricType}
-            usedSlots={usedSlots}
-            maxSlots={MAX_FINGERPRINTS}
+            slots={slots}
+            onSlotPress={handleSlotPress}
             onScanPress={handleTestScan}
             scanning={scanning}
+            activeSlotIndex={activeSlotIndex}
           />
 
           <View style={T.statusPill}>
             <View style={T.statusDot} />
-            <Text style={T.statusTxt}>{capability.biometricType} login is active</Text>
+            <Text style={T.statusTxt}>
+              {capability.biometricType} login is active · {slots.filter(Boolean).length}/{MAX_FINGERPRINTS} fingerprints
+            </Text>
           </View>
         </>
       )}
 
-      {/* Warning: too many fingerprints while OFF */}
-      {!isOn && capability.isEnrolled && capability.enrolledCount > MAX_FINGERPRINTS && (
+      {/* Warning: no biometrics enrolled at OS level */}
+      {!isOn && !capability.isEnrolled && (
         <View style={T.warningPill}>
           <Ionicons name="warning-outline" size={12} color="#b45309" />
           <Text style={T.warningTxt}>
-            {capability.enrolledCount} fingerprints enrolled — max {MAX_FINGERPRINTS} allowed. Remove one in device settings.
+            No fingerprints enrolled on this device. Add one in Settings → Biometrics.
           </Text>
         </View>
       )}
