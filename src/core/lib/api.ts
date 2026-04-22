@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ─── Configuration ───────────────────────────────────────────────────────────
 
 
-export const BASE_URL = 'http://192.168.0.133:8000'; // Appareil physique (remplacez l'IP)
+export const BASE_URL = 'http://192.168.0.132:8000'; // Appareil physique (remplacez l'IP)
 
 const API_URL = `${BASE_URL}/api`;
 

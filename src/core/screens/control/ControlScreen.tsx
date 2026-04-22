@@ -11,6 +11,9 @@
  *                 branch → cross-ref via GET /api/transactions/?movement_type=ف بيع&branch=X
  * Inventory params: branch, search → GET /api/inventory/<id>/lines/?branch=X&search=X
  * Transaction params: movement_type(trimmed), branch, date_from, date_to → GET /api/transactions/
+ *
+ * FIX: All FlatList data is deduped by id on append to prevent
+ *      "Encountered two children with the same key" warning.
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -64,6 +67,15 @@ function Skeleton({ lines = 2 }: { lines?: number }) {
       ))}
     </View>
   );
+}
+
+// ─── Dedup helper ─────────────────────────────────────────────────────────────
+// Prevents "Encountered two children with the same key" when paginating.
+// Returns prev unchanged for page 1, deduped merge for subsequent pages.
+function mergeUnique<T extends { id: string }>(prev: T[], next: T[], page: number): T[] {
+  if (page === 1) return next;
+  const existingIds = new Set(prev.map(r => r.id));
+  return [...prev, ...next.filter(r => !existingIds.has(r.id))];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -181,7 +193,8 @@ function AgingTab() {
       ]);
       if (listRes.status === 'fulfilled') {
         const data = listRes.value;
-        setRows(prev => p === 1 ? data.records : [...prev, ...data.records]);
+        // FIX: dedup by id to prevent duplicate key warning on scroll/filter
+        setRows(prev => mergeUnique(prev, data.records, p));
         setTotalPages(data.total_pages);
         setGrandTotal(data.grand_total);
         setReportDate(data.report_date || '');
@@ -320,7 +333,6 @@ function InventoryTab() {
     if (p > 1) setLoadingMore(true);
     try {
       // Dedicated totals call — mirrors InventoryPage.tsx totalsData (page_size=1)
-      // This ensures KPI values reflect FULL queryset, not just current page
       if (p === 1) {
         InventoryMobileService.getLines(sid, { page:1, page_size:1, branch, search: s||undefined })
           .then(r => setTotals(r.totals)).catch(() => {});
@@ -328,7 +340,8 @@ function InventoryTab() {
       const res = await InventoryMobileService.getLines(sid, {
         page: p, page_size: 100, branch, search: s||undefined,
       });
-      setLines(prev => p === 1 ? res.lines : [...prev, ...res.lines]);
+      // FIX: dedup by id to prevent duplicate key warning on scroll/filter
+      setLines(prev => mergeUnique(prev, res.lines, p));
       setTotalPages(res.total_pages);
       setPage(p);
     } finally { setLoadingMore(false); }
@@ -523,18 +536,15 @@ function TransactionsTab() {
     try {
       const dateRange = periodToDates(f.period);
       const params: Record<string,any> = { page: p, page_size: 25 };
-      // movement_type: raw Arabic, trimmed by mobileDataService layer
       if (f.movement_type !== 'all') params.movement_type = f.movement_type;
-      // branch: icontains on branch__name FK
       if (f.branch !== 'all')        params.branch        = f.branch;
-      // period → date_from / date_to
       if (dateRange.date_from)       params.date_from     = dateRange.date_from;
       if (dateRange.date_to)         params.date_to       = dateRange.date_to;
 
       const res = await TransactionMobileService.getList(params);
-      setTxs(prev => p === 1 ? res.movements : [...prev, ...res.movements]);
+      // FIX: dedup by id to prevent duplicate key warning on scroll/filter
+      setTxs(prev => mergeUnique(prev, res.movements, p));
       setTotalPages(res.total_pages);
-      // totals reflect ALL filtered rows — not just current page (mirrors backend)
       setTotals(res.totals);
       setPage(p);
     } finally { setLoading(false); setRefreshing(false); setLoadingMore(false); }
@@ -575,7 +585,6 @@ function TransactionsTab() {
           }}
         />
       )}
-      {/* KPI totals — from same API response as table, reflect ALL filtered rows */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal:12, marginTop:12 }} contentContainerStyle={{ gap:8 }}>
         <MiniKpi value={fmtCurrency(totals?.total_out_value)} label="Total Out"  color={Colors.red}   />
         <MiniKpi value={fmtCurrency(totals?.total_in_value)}  label="Total In"   color={Colors.green} />
@@ -627,7 +636,6 @@ function TransactionsTab() {
           {
             key:     'movement_type',
             label:   'Movement Type',
-            // Dynamically loaded from backend — mirrors TransactionsPage.tsx
             options: ['all', ...types],
           },
           {
