@@ -6,10 +6,10 @@
     "scheme": "weeg",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "icon": "./assets/icon.png",
+    "icon": "./src/core/assets/logo.jpeg",
 
     "splash": {
-      "image": "./assets/logo.jpeg",
+      "image": "./src/core/assets/logo.jpeg",
       "resizeMode": "contain",
       "backgroundColor": "#1a6fe8"
     },
@@ -19,7 +19,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.jpeg",
+        "foregroundImage": "./src/core/assets/logo.jpeg",
         "backgroundColor": "#1a6fe8"
       },
       "package": "com.weeg.mobile",
