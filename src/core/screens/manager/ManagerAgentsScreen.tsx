@@ -116,7 +116,6 @@ export function ManagerAgentsScreen() {
   });
 
   const activeCount    = agents.filter(a => a.status === 'active' || a.status === 'approved').length;
-  const suspendedCount = agents.filter(a => a.status === 'suspended').length;
 
   return (
     <View style={{ flex: 1, backgroundColor: T.surface2 }}>
@@ -139,9 +138,8 @@ export function ManagerAgentsScreen() {
 
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
           {[
-            { label: 'Total',     val: agents.length,    color: '#fff',    bg: 'rgba(255,255,255,0.12)' },
-            { label: 'Active',    val: activeCount,      color: '#34d399', bg: 'rgba(52,211,153,0.15)'  },
-            { label: 'Suspended', val: suspendedCount,   color: '#f87171', bg: 'rgba(248,113,113,0.15)' },
+            { label: 'Total',  val: agents.length, color: '#fff', bg: 'rgba(255,255,255,0.12)' },
+            { label: 'Active', val: activeCount,   color: '#34d399', bg: 'rgba(52,211,153,0.15)' },
           ].map(({ label, val, color, bg }) => (
             <View key={label} style={{ flex: 1, backgroundColor: bg, borderRadius: 10, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
               <Text style={{ fontSize: 18, fontWeight: '800', color }}>{val}</Text>
