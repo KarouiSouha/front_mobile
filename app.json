@@ -20,7 +20,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./src/core/assets/app-icon.png",
-        "backgroundColor": "#1a6fe8"
+        "backgroundColor": "#ffffff"
       },
       "package": "com.weeg.mobile",
       "permissions": [
