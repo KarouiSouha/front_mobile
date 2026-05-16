@@ -140,7 +140,7 @@ async function request<T>(
       }
       // Refresh échoué → déconnexion
       await TokenStorage.clearTokens();
-      return { status: 401, ok: false, error: 'Session expirée. Veuillez vous reconnecter.' };
+      return { status: 401, ok: false, error: 'Session expired. Please log in again.' };
     }
 
     if (response.ok) {
@@ -148,7 +148,7 @@ async function request<T>(
     }
 
     // Erreurs métier Django
-    const error = data?.error || data?.detail || 'Une erreur est survenue';
+    const error = data?.error || data?.detail || 'An error occurred';
     const errors = data?.errors || undefined;
     return { status: response.status, ok: false, error, errors };
 
@@ -157,7 +157,7 @@ async function request<T>(
     return {
       status: 0,
       ok: false,
-      error: 'Impossible de contacter le serveur. Vérifiez votre connexion.',
+      error: 'Failed to contact the server. Please check your connection.',
     };
   }
 }

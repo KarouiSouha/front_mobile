@@ -78,7 +78,7 @@ const KEYS = {
 export interface BiometricCapability {
   isSupported: boolean;
   isEnrolled: boolean;
-  biometricType: 'Fingerprint' | 'Face ID' | 'Iris' | 'Biometrics';
+  biometricType: 'Fingerprint';
   /**
    * Whether biometric login is enabled for the given email.
    * Always false when no email is provided.
@@ -172,22 +172,21 @@ export const BiometricService = {
    */
   async getCapability(email?: string | null): Promise<BiometricCapability> {
     try {
-      const isSupported = await LocalAuthentication.hasHardwareAsync();
-      const isEnrolled  = isSupported
-        ? await LocalAuthentication.isEnrolledAsync()
-        : false;
+      // Only treat the device as biometric-capable when a fingerprint sensor
+      // is available. Devices that only provide Face ID / Iris should be
+      // considered "not supported" for this app's fingerprint-only policy.
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const supportedTypes = hasHardware
+        ? await LocalAuthentication.supportedAuthenticationTypesAsync()
+        : [];
 
-      let biometricType: BiometricCapability['biometricType'] = 'Biometrics';
-      if (isSupported) {
-        const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
-        if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-          biometricType = 'Face ID';
-        } else if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
-          biometricType = 'Fingerprint';
-        } else if (types.includes(LocalAuthentication.AuthenticationType.IRIS)) {
-          biometricType = 'Iris';
-        }
-      }
+      const hasFingerprint = supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT);
+
+      // isSupported here means "device supports fingerprint authentication".
+      const isSupported = hasHardware && hasFingerprint;
+      const isEnrolled  = isSupported ? await LocalAuthentication.isEnrolledAsync() : false;
+
+      const biometricType: BiometricCapability['biometricType'] = 'Fingerprint';
 
       let isEnabled     = false;
       let enrolledCount = isEnrolled ? 1 : 0;
@@ -196,16 +195,13 @@ export const BiometricService = {
         const raw = await AsyncStorage.getItem(KEYS.enabled(email));
         isEnabled = raw === 'true';
 
-        // Surface the stored snapshot so callers can display it in the UI
         const storedCount = await AsyncStorage.getItem(KEYS.enrolledCount(email));
-        if (storedCount !== null) {
-          enrolledCount = parseInt(storedCount, 10);
-        }
+        if (storedCount !== null) enrolledCount = parseInt(storedCount, 10);
       }
 
       return { isSupported, isEnrolled, biometricType, isEnabled, enrolledCount };
     } catch {
-      return { isSupported: false, isEnrolled: false, biometricType: 'Biometrics', isEnabled: false, enrolledCount: 0 };
+      return { isSupported: false, isEnrolled: false, biometricType: 'Fingerprint', isEnabled: false, enrolledCount: 0 };
     }
   },
 

@@ -158,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await AuthService.login(email, password);
 
     if (!res.ok) {
-      const msg = res.error || 'Identifiants incorrects';
+      const msg = res.error || 'Incorrect credentials';
       setError(msg);
       return { success: false, message: msg };
     }
@@ -174,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await TokenStorage.saveUser(profileRes.data);
       const mappedUser = mapBackendUser(profileRes.data);
       setUser(mappedUser);
-      return { success: true, message: `Bienvenue, ${mappedUser.name} !` };
+      return { success: true, message: `Welcome, ${mappedUser.name} !` };
     }
 
     // Fallback avec les données du login
@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mustChangePassword: loginUser.must_change_password,
     };
     setUser(fallbackUser);
-    return { success: true, message: `Bienvenue, ${fallbackUser.name} !` };
+    return { success: true, message: `Welcome, ${fallbackUser.name} !` };
   }, []);
 
   // ── Signup Manager ─────────────────────────────────────────────────────────
@@ -226,12 +226,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const msgs = Object.values(res.errors).flat().join('. ');
         return { success: false, message: msgs };
       }
-      return { success: false, message: res.error || 'Erreur lors de l\'inscription' };
+      return { success: false, message: res.error || 'Error during registration' };
     }
 
     return {
       success: true,
-      message: res.data?.message || 'Compte créé ! Un administrateur validera votre demande.',
+      message: res.data?.message || 'Account created! An administrator will review your request.',
     };
   }, []);
 
@@ -264,9 +264,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (res.ok) {
       await refreshProfile();
-      return { success: true, message: res.data?.message || 'Profil mis à jour !' };
+      return { success: true, message: res.data?.message || 'Profile updated!' };
     }
-    return { success: false, message: res.error || 'Erreur lors de la mise à jour' };
+    return { success: false, message: res.error || 'Error updating profile' };
   }, [refreshProfile]);
 
   // ── Change Password ────────────────────────────────────────────────────────
@@ -285,23 +285,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Le backend invalide tous les tokens → déconnexion automatique
       await TokenStorage.clearTokens();
       setUser(null);
-      return { success: true, message: res.data?.message || 'Mot de passe changé. Reconnectez-vous.' };
+      return { success: true, message: res.data?.message || 'Password changed. Please log in again.' };
     }
-    return { success: false, message: res.error || 'Erreur lors du changement' };
+    return { success: false, message: res.error || 'Error changing password' };
   }, []);
 
   // ── Admin: Approuver Manager ───────────────────────────────────────────────
   const approveManager = useCallback(async (managerId: string) => {
     const res = await AdminService.reviewManager(managerId, 'approve');
-    if (res.ok) return { success: true, message: res.data?.message || 'Manager approuvé !' };
-    return { success: false, message: res.error || 'Erreur lors de l\'approbation' };
+    if (res.ok) return { success: true, message: res.data?.message || 'Manager approved!' };
+    return { success: false, message: res.error || 'Error approving manager' };
   }, []);
 
   // ── Admin: Rejeter Manager ─────────────────────────────────────────────────
   const rejectManager = useCallback(async (managerId: string, reason: string) => {
     const res = await AdminService.reviewManager(managerId, 'reject', reason);
-    if (res.ok) return { success: true, message: res.data?.message || 'Demande rejetée.' };
-    return { success: false, message: res.error || 'Erreur lors du rejet' };
+    if (res.ok) return { success: true, message: res.data?.message || 'Manager rejected!' };
+    return { success: false, message: res.error || 'Error rejecting manager' };
   }, []);
 
   // ── Admin: Liste managers en attente ───────────────────────────────────────
@@ -327,13 +327,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (res.ok) {
-      return { success: true, message: res.data?.message || 'Agent créé !', agent: res.data?.agent };
+      return { success: true, message: res.data?.message || 'Agent created!', agent: res.data?.agent };
     }
     if (res.errors) {
       const msgs = Object.values(res.errors).flat().join('. ');
       return { success: false, message: msgs };
     }
-    return { success: false, message: res.error || 'Erreur lors de la création' };
+    return { success: false, message: res.error || 'Error creating agent' };
   }, []);
 
   return (

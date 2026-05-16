@@ -83,11 +83,8 @@ export function BiometricSetupPrompt({
     }
   }, [visible]);
 
-  const iconName = capability.biometricType === 'Face ID'
-    ? 'scan-outline'
-    : capability.biometricType === 'Iris'
-    ? 'eye-outline'
-    : 'finger-print-outline';
+  const biometricLabel = 'Fingerprint';
+  const iconName = 'finger-print-outline';
 
   // Check if too many fingerprints are already enrolled
   const tooManyFingerprints = capability.enrolledCount > MAX_FINGERPRINTS;
@@ -152,14 +149,14 @@ export function BiometricSetupPrompt({
 
           {/* Content */}
           <Text style={S.title}>
-            {tooManyFingerprints
-              ? 'Too Many Fingerprints'
-              : `Enable ${capability.biometricType} Login`}
+              {tooManyFingerprints
+                ? 'Too Many Fingerprints'
+                : `Enable ${biometricLabel} Login`}
           </Text>
           <Text style={S.subtitle}>
             {tooManyFingerprints
               ? `WEEG allows up to ${MAX_FINGERPRINTS} fingerprints per account. You currently have ${capability.enrolledCount} enrolled. Remove fingerprints in your device settings to continue.`
-              : `Sign in instantly with your ${capability.biometricType.toLowerCase()} — no password needed.`}
+              : `Sign in instantly with your fingerprint — no password needed.`}
           </Text>
 
           {/* Feature bullets — only when not blocked */}
@@ -168,7 +165,7 @@ export function BiometricSetupPrompt({
               {[
                 { icon: 'flash-outline',              text: 'One-touch instant access' },
                 { icon: 'shield-checkmark-outline',   text: 'Secured by your device hardware' },
-                { icon: 'eye-off-outline',            text: 'Your biometric never leaves this device' },
+                { icon: 'finger-print-outline',       text: 'Your fingerprint never leaves this device' },
                 { icon: 'finger-print-outline',       text: `Up to ${MAX_FINGERPRINTS} fingerprints per account` },
               ].map((f, i) => (
                 <View key={i} style={S.featureRow}>
@@ -206,7 +203,7 @@ export function BiometricSetupPrompt({
                 >
                   <Ionicons name={iconName as any} size={18} color="#fff" />
                   <Text style={S.primaryBtnTxt}>
-                    {enabling ? 'Enabling…' : `Enable ${capability.biometricType}`}
+                    {enabling ? 'Enabling…' : `Enable ${biometricLabel}`}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>

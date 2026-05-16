@@ -12,7 +12,7 @@
  *   - The main scan button (large circle) → test scan (verify the active finger).
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   Switch, Alert, ActivityIndicator, TextInput, Modal,
@@ -218,7 +218,6 @@ function FingerprintScanVisual({
 
   return (
     <View style={fv.container}>
-
       {/* ── Slot row ── */}
       <View style={fv.topRow}>
         <Text style={fv.regLabel}>Registered fingerprints</Text>
@@ -244,17 +243,17 @@ function FingerprintScanVisual({
                     <ActivityIndicator size="small" color="#fff" />
                   ) : filled ? (
                     // Filled: gradient icon + small remove badge
-                    <View style={fv.slotInner}>
+                    (<View style={fv.slotInner}>
                       <Ionicons name="finger-print-outline" size={16} color="#fff" />
                       <View style={fv.removeBadge}>
                         <Ionicons name="close" size={7} color="#fff" />
                       </View>
-                    </View>
+                    </View>)
                   ) : (
                     // Empty: dashed outline + add icon
-                    <View style={fv.slotInner}>
+                    (<View style={fv.slotInner}>
                       <Ionicons name="add" size={16} color={Colors.text3} />
-                    </View>
+                    </View>)
                   )}
                 </TouchableOpacity>
               </Animated.View>
@@ -264,7 +263,6 @@ function FingerprintScanVisual({
           <Text style={fv.slotCount}>{filledCount}/{MAX_FINGERPRINTS}</Text>
         </View>
       </View>
-
       {/* ── Slot hints ── */}
       <View style={fv.hintRow}>
         <View style={fv.hintDot} />
@@ -276,7 +274,6 @@ function FingerprintScanVisual({
             : 'Both fingerprint slots are registered'}
         </Text>
       </View>
-
       {/* ── Central fingerprint scan button ── */}
       <TouchableOpacity onPress={onScanPress} activeOpacity={0.85} disabled={scanning} style={fv.btnWrap}>
         <Animated.View style={[fv.pulseRing, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]} />
@@ -289,7 +286,6 @@ function FingerprintScanVisual({
           <Ionicons name={iconName as any} size={46} color="#fff" />
         </LinearGradient>
       </TouchableOpacity>
-
       <Text style={fv.tapLabel}>
         {scanning ? 'Scanning…' : `Tap to test ${biometricType}`}
       </Text>
@@ -631,9 +627,7 @@ export function BiometricToggle({ email }: BiometricToggleProps) {
     );
   }
 
-  const iconName = capability.biometricType === 'Face ID' ? 'scan-outline'
-    : capability.biometricType === 'Iris' ? 'eye-outline'
-    : 'finger-print-outline';
+  const iconName = 'finger-print-outline';
 
   const isOn = capability.isEnabled;
 
@@ -661,10 +655,10 @@ export function BiometricToggle({ email }: BiometricToggleProps) {
             <Text style={T.title}>{capability.biometricType} Login</Text>
             <Text style={T.sub}>
               {isOn
-                ? `Active — tap your ${capability.biometricType.toLowerCase()} to sign in`
-                : capability.isEnrolled
-                ? `Enable quick login with your ${capability.biometricType.toLowerCase()}`
-                : `No ${capability.biometricType.toLowerCase()} enrolled on this device`}
+                ? `Active — tap your fingerprint to sign in`
+                  : capability.isEnrolled
+                  ? `Enable quick login with your fingerprint`
+                  : `No fingerprint enrolled on this device`}
             </Text>
           </View>
         </View>
@@ -697,7 +691,7 @@ export function BiometricToggle({ email }: BiometricToggleProps) {
           <View style={T.statusPill}>
             <View style={T.statusDot} />
             <Text style={T.statusTxt}>
-              {capability.biometricType} login is active · {slots.filter(Boolean).length}/{MAX_FINGERPRINTS} fingerprints
+              Fingerprint login is active · {slots.filter(Boolean).length}/{MAX_FINGERPRINTS} fingerprints
             </Text>
           </View>
         </>
