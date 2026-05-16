@@ -6,8 +6,9 @@
  *        profil, changement de mot de passe, et approbation des agents.
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { AuthService, UserService, AdminService, ManagerService, TokenStorage, BackendUser } from '../lib/api';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { Alert } from 'react-native';
+import { AuthService, UserService, AdminService, ManagerService, TokenStorage, BackendUser, registerSessionExpiredHandler } from '../lib/api';
 
 // ─── Types exportés (compatibles avec les écrans existants) ──────────────────
 
@@ -101,9 +102,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const sessionExpiredShown = useRef(false);
 
   // ── Chargement initial (token en cache) ────────────────────────────────────
   useEffect(() => {
+    registerSessionExpiredHandler(() => {
+      setUser(null);
+      setError(null);
+
+      if (!sessionExpiredShown.current) {
+        sessionExpiredShown.current = true;
+        Alert.alert('Session expirée', 'Votre session a été révoquée. Veuillez vous reconnecter.');
+      }
+
+      void TokenStorage.clearTokens();
+    });
+
     (async () => {
       try {
         const cachedUser = await TokenStorage.getUser();
@@ -150,6 +164,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
       }
     })();
+
+    return () => {
+      registerSessionExpiredHandler(null);
+    };
   }, []);
 
   // ── Login ──────────────────────────────────────────────────────────────────
@@ -284,6 +302,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (res.ok) {
       // Le backend invalide tous les tokens → déconnexion automatique
       await TokenStorage.clearTokens();
+      sessionExpiredShown.current = false;
       setUser(null);
       return { success: true, message: res.data?.message || 'Password changed. Please log in again.' };
     }

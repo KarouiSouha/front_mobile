@@ -16,6 +16,19 @@ const STORAGE_KEYS = {
   USER: 'weeg_user',
 };
 
+// ─── Session expiry notification ────────────────────────────────────────────
+
+type SessionExpiredHandler = () => void;
+let sessionExpiredHandler: SessionExpiredHandler | null = null;
+
+export function registerSessionExpiredHandler(handler: SessionExpiredHandler | null) {
+  sessionExpiredHandler = handler;
+}
+
+function notifySessionExpired() {
+  sessionExpiredHandler?.();
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface ApiResponse<T = any> {
@@ -140,6 +153,7 @@ async function request<T>(
       }
       // Refresh échoué → déconnexion
       await TokenStorage.clearTokens();
+      notifySessionExpired();
       return { status: 401, ok: false, error: 'Session expired. Please log in again.' };
     }
 

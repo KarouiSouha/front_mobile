@@ -21,17 +21,23 @@ export function AppNavigator() {
     );
   }
 
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {user ? (
+  if (user) {
+    return (
+      <Stack.Navigator key="app" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main" component={MainNavigator} />
-      ) : (
-        <>
-          <Stack.Screen name="Landing" component={LandingScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Signup" component={SignupScreen} />
-        </>
-      )}
+      </Stack.Navigator>
+    );
+  }
+
+  return (
+    <Stack.Navigator
+      key="auth"
+      screenOptions={{ headerShown: false }}
+      initialRouteName="Landing"
+    >
+      <Stack.Screen name="Landing" component={LandingScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Signup" component={SignupScreen} />
     </Stack.Navigator>
   );
 }
