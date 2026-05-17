@@ -1,3 +1,4 @@
+
 /**
  * src/core/lib/biometricService.ts
  * ─────────────────────────────────────────────────────────────────────────────
@@ -28,12 +29,13 @@
  * BiometricSetupGate (mounted in the authenticated navigator) reads it,
  * shows the prompt once, then clears it.
  *
- * ⚠️  Note on security: In production use expo-secure-store instead of
- *   AsyncStorage for credential storage.
+ * ⚠️  Note on security: This version uses expo-secure-store for credential
+ *   storage to ensure passwords are encrypted in the device keychain/keystore.
  */
 
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -271,10 +273,10 @@ export const BiometricService = {
         };
       }
 
-      await AsyncStorage.multiSet([
-        [KEYS.enabled(norm),       'true'],
-        [KEYS.password(norm),      password],
-        [KEYS.enrolledCount(norm), String(currentCount)],
+      await Promise.all([
+        AsyncStorage.setItem(KEYS.enabled(norm), 'true'),
+        SecureStore.setItemAsync(KEYS.password(norm), password),
+        AsyncStorage.setItem(KEYS.enrolledCount(norm), String(currentCount)),
       ]);
       await addToIndex(norm);
       return { success: true };
@@ -289,10 +291,10 @@ export const BiometricService = {
    */
   async disable(email: string): Promise<void> {
     const norm = email.trim().toLowerCase();
-    await AsyncStorage.multiRemove([
-      KEYS.enabled(norm),
-      KEYS.password(norm),
-      KEYS.enrolledCount(norm),
+    await Promise.all([
+      AsyncStorage.removeItem(KEYS.enabled(norm)),
+      SecureStore.deleteItemAsync(KEYS.password(norm)),
+      AsyncStorage.removeItem(KEYS.enrolledCount(norm)),
     ]);
     await removeFromIndex(norm);
   },
@@ -368,7 +370,7 @@ export const BiometricService = {
       }
 
       // ── Retrieve credentials for THIS specific email ─────────────────────
-      const storedPassword = await AsyncStorage.getItem(KEYS.password(norm));
+      const storedPassword = await SecureStore.getItemAsync(KEYS.password(norm));
 
       if (!storedPassword) {
         // Credentials missing — disable and force password login
@@ -394,9 +396,9 @@ export const BiometricService = {
    * after navigation. Called by LoginScreen right after login() succeeds.
    */
   async setPendingSetup(email: string, password: string): Promise<void> {
-    await AsyncStorage.multiSet([
-      [KEYS.PENDING_EMAIL,    email.trim().toLowerCase()],
-      [KEYS.PENDING_PASSWORD, password],
+    await Promise.all([
+      AsyncStorage.setItem(KEYS.PENDING_EMAIL, email.trim().toLowerCase()),
+      SecureStore.setItemAsync(KEYS.PENDING_PASSWORD, password),
     ]);
   },
 
@@ -405,9 +407,8 @@ export const BiometricService = {
    * Returns null if no pending setup exists.
    */
   async getPendingSetup(): Promise<{ email: string; password: string } | null> {
-    const results  = await AsyncStorage.multiGet([KEYS.PENDING_EMAIL, KEYS.PENDING_PASSWORD]);
-    const email    = results[0][1];
-    const password = results[1][1];
+    const email = await AsyncStorage.getItem(KEYS.PENDING_EMAIL);
+    const password = await SecureStore.getItemAsync(KEYS.PENDING_PASSWORD);
     if (email && password) return { email, password };
     return null;
   },
@@ -417,6 +418,9 @@ export const BiometricService = {
    * the user has made their choice (enable or dismiss).
    */
   async clearPendingSetup(): Promise<void> {
-    await AsyncStorage.multiRemove([KEYS.PENDING_EMAIL, KEYS.PENDING_PASSWORD]);
+    await Promise.all([
+      AsyncStorage.removeItem(KEYS.PENDING_EMAIL),
+      SecureStore.deleteItemAsync(KEYS.PENDING_PASSWORD),
+    ]);
   },
 };
