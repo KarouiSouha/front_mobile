@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!sessionExpiredShown.current) {
         sessionExpiredShown.current = true;
-        Alert.alert('Session expirée', 'Votre session a été révoquée. Veuillez vous reconnecter.');
+        Alert.alert('Session expired', 'Your session has been revoked. Please log in again.');
       }
 
       void TokenStorage.clearTokens();
